@@ -96,7 +96,7 @@ INIReader.SetKey(iniFilePath, "Section1", "Key2", key1);
 
 ## Developer
 
-This class is developed by Lonewolf239 (https://github.com/Lonewolf239).
+This class is developed by [Lonewolf239](https://github.com/Lonewolf239).
 
 ## Version
 
