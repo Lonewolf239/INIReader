@@ -15,8 +15,8 @@ INIReader is a C# class for working with INI files. It provides methods for crea
 To create an INI file if it doesn't exist, use one of the following methods:
 
 ```cs
-CreateIniFileIfNotExist(string path, string[] data)
-CreateIniFileIfNotExist(string path, string data)
+CreateIniFileIfNotExist(string path, string[] data);
+CreateIniFileIfNotExist(string path, string data);
 ```
 
 - `path`: The path to the INI file.
@@ -30,8 +30,8 @@ The method returns:
 To recreate an existing file, use one of the following methods:
 
 ```cs
-CreateIniFile(string path, string[] data)
-CreateIniFile(string path, string data)
+CreateIniFile(string path, string[] data);
+CreateIniFile(string path, string data);
 ```
 
 - `path`: The path to the INI file.
@@ -46,11 +46,11 @@ The method returns:
 To read data from an INI file, use one of the following methods:
 
 ```cs
-GetBool(string path, string section, string key)
-GetInt(string path, string section, string key)
-GetSingle(string path, string section, string key)
-GetDouble(string path, string section, string key)
-GetString(string path, string section, string key)
+GetBool(string path, string section, string key);
+GetInt(string path, string section, string key);
+GetSingle(string path, string section, string key);
+GetDouble(string path, string section, string key);
+GetString(string path, string section, string key);
 ```
 
 - `path`: The path to the INI file.
@@ -64,11 +64,11 @@ The method returns the corresponding data type from the specified key.
 To save data to an INI file, use one of the following methods:
 
 ```cs
-SetKey(string path, string section, string key, string value)
-SetKey(string path, string section, string key, bool value)
-SetKey(string path, string section, string key, int value)
-SetKey(string path, string section, string key, float value)
-SetKey(string path, string section, string key, double value)
+SetKey(string path, string section, string key, string value);
+SetKey(string path, string section, string key, bool value);
+SetKey(string path, string section, string key, int value);
+SetKey(string path, string section, string key, float value);
+SetKey(string path, string section, string key, double value);
 ```
 
 - `path`: The path to the INI file.
