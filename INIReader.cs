@@ -9,7 +9,7 @@ namespace IniReader
     /// <br></br>
     /// Developer: <a href="https://github.com/Lonewolf239">Lonewolf239</a>
     /// <br></br>
-    /// Version: 1.0
+    /// <b>Version: 1.1</b>
     /// </summary>
     internal class INIReader
     {
@@ -55,13 +55,62 @@ namespace IniReader
             }
         }
 
+        /// <summary>
+        /// Checks if a section exists in the specified path.
+        /// </summary>
+        /// <param name="path">The path to the data source.</param>
+        /// <param name="section">The section to search for.</param>
+        /// <returns><b>True</b> if the section exists, <b>false</b> otherwise.</returns>
+        public static bool SectionExist(string path, string section)
+        {
+            string[][] data = GetData(path);
+            bool result = false;
+            foreach (string[] sections in data)
+            {
+                if (sections[0].Contains(section))
+                {
+                    result = true;
+                    break;
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Checks if a key exists within a given section in the specified path.
+        /// </summary>
+        /// <param name="path">The path to the data source.</param>
+        /// <param name="section">The section to search for.</param>
+        /// <param name="key">The key to search for within the section.</param>
+        /// <returns><b>True</b> if the key exists within the section, <b>false</b> otherwise.</returns>
+        public static bool KeyExist(string path, string section, string key)
+        {
+            string[][] data = GetData(path);
+            bool result = false;
+            foreach (string[] sections in data)
+            {
+                if (sections[0].Contains(section))
+                {
+                    foreach (string keys in sections)
+                    {
+                        if (keys.Contains(key))
+                        {
+                            result = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+
         /// <summary>This is a method for creating an INI file if it is missing</summary>
         /// <param name="path">Path to the INI file.</param>
         /// <param name="data">An array of strings representing the data to be written to the file.</param>
         /// <returns>
-        /// If an error occurred during file creation: -1<br></br>
-        /// If the file exists: 0<br></br>
-        /// If the file is created successfully: 1
+        /// If an error occurred during file creation: <b>-1</b><br></br>
+        /// If the file exists: <b>0</b><br></br>
+        /// If the file is created successfully: <b>1</b>
         /// </returns>
         public static int CreateIniFileIfNotExist(string path, string[] data)
         {
@@ -85,9 +134,9 @@ namespace IniReader
         /// <param name="path">Path to the INI file.</param>
         /// <param name="data">A string representing the data to be written to the file.</param>
         /// <returns>
-        /// If an error occurred during file creation: -1<br></br>
-        /// If the file exists: 0<br></br>
-        /// If the file is created successfully: 1
+        /// If an error occurred during file creation: <b>-1</b><br></br>
+        /// If the file exists: <b>0</b><br></br>
+        /// If the file is created successfully: <b>1</b>
         /// </returns>
         public static int CreateIniFileIfNotExist(string path, string data)
         {
@@ -111,8 +160,8 @@ namespace IniReader
         /// <param name="path">Path to the INI file.</param>
         /// <param name="data">An array of strings representing the data to be written to the file.</param>
         /// <returns>
-        /// False - if an error occurred during file creation<br></br>
-        /// True - if the file is created successfully
+        /// <b>False</b> - if an error occurred during file creation<br></br>
+        /// <b>True</b> - if the file is created successfully
         /// </returns>
         public static bool CreateIniFile(string path, string[] data)
         {
@@ -131,8 +180,8 @@ namespace IniReader
         /// <param name="path">Path to the INI file.</param>
         /// <param name="data">A string representing the data to be written to the file.</param>
         /// <returns>
-        /// False - if an error occurred during file creation<br></br>
-        /// True - if the file is created successfully
+        /// <b>False</b> - if an error occurred during file creation<br></br>
+        /// <b>True</b> - if the file is created successfully
         /// </returns>
         public static bool CreateIniFile(string path, string data)
         {
@@ -150,8 +199,8 @@ namespace IniReader
         /// <summary>This is a method of adding a new section to the end of the file</summary>
         /// <param name="path">Path to the INI file.</param>
         /// <returns>
-        /// True if the operation was successful.
-        /// <br></br>False if an error occurred during execution.
+        /// <b>True</b> if the operation was successful.
+        /// <br></br><b>False</b> if an error occurred during execution.
         /// </returns>
         public static bool AddSection(string path, string section)
         {
@@ -172,8 +221,8 @@ namespace IniReader
         /// <param name="key">The key that will be created.</param>
         /// <param name="value">The value that will be written to the key.</param>
         /// <returns>
-        /// True if the operation was successful.
-        /// <br></br>False if an error occurred during execution.
+        /// <b>True</b> if the operation was successful.
+        /// <br></br><b>False</b> if an error occurred during execution.
         /// </returns>
         public static bool AddKeyInSection(string path, string section, string key, string value)
         {
@@ -399,8 +448,8 @@ namespace IniReader
         /// <param name="key">The key by which the recording will be made.</param>
         /// <param name="value">The value that should be written to the file.</param>
         /// <returns>
-        /// True if the operation was successful.
-        /// <br></br>False if an error occurred during execution.
+        /// <b>True</b> if the operation was successful.
+        /// <br></br><b>False</b> if an error occurred during execution.
         /// </returns>
         public static bool SetKey(string path, string section, string key, string value)
         {
@@ -443,8 +492,8 @@ namespace IniReader
         /// <param name="key">The key by which the recording will be made.</param>
         /// <param name="value">The value that should be written to the file.</param>
         /// <returns>
-        /// True if the operation was successful.
-        /// <br></br>False if an error occurred during execution.
+        /// <b>True</b> if the operation was successful.
+        /// <br></br><b>False</b> if an error occurred during execution.
         /// </returns>
         public static bool SetKey(string path, string section, string key, bool value)
         {
@@ -457,8 +506,8 @@ namespace IniReader
         /// <param name="key">The key by which the recording will be made.</param>
         /// <param name="value">The value that should be written to the file.</param>
         /// <returns>
-        /// True if the operation was successful.
-        /// <br></br>False if an error occurred during execution.
+        /// <b>True</b> if the operation was successful.
+        /// <br></br><b>False</b> if an error occurred during execution.
         /// </returns>
         public static bool SetKey(string path, string section, string key, float value)
         {
@@ -471,8 +520,8 @@ namespace IniReader
         /// <param name="key">The key by which the recording will be made.</param>
         /// <param name="value">The value that should be written to the file.</param>
         /// <returns>
-        /// True if the operation was successful.
-        /// <br></br>False if an error occurred during execution.
+        /// <b>True</b> if the operation was successful.
+        /// <br></br><b>False</b> if an error occurred during execution.
         /// </returns>
         public static bool SetKey(string path, string section, string key, double value)
         {
@@ -485,8 +534,8 @@ namespace IniReader
         /// <param name="key">The key by which the recording will be made.</param>
         /// <param name="value">The value that should be written to the file.</param>
         /// <returns>
-        /// True if the operation was successful.
-        /// <br></br>False if an error occurred during execution.
+        /// <b>True</b> if the operation was successful.
+        /// <br></br><b>False</b> if an error occurred during execution.
         /// </returns>
         public static bool SetKey(string path, string section, string key, int value)
         {
