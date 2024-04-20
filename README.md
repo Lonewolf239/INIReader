@@ -44,16 +44,17 @@ The method returns:
 To read data from an INI file, use one of the following methods:
 
 ```cs
-INIReader.GetString(PATH, SECTION, KEY);
-INIReader.GetBool(PATH, SECTION, KEY);
-INIReader.GetInt(PATH, SECTION, KEY);
-INIReader.GetSingle(PATH, SECTION, KEY);
-INIReader.GetDouble(PATH, SECTION, KEY);
+INIReader.GetString(PATH, SECTION, KEY, DEFAULT_VALUE);
+INIReader.GetBool(PATH, SECTION, KEY, DEFAULT_VALUE);
+INIReader.GetInt(PATH, SECTION, KEY, DEFAULT_VALUE);
+INIReader.GetSingle(PATH, SECTION, KEY, DEFAULT_VALUE);
+INIReader.GetDouble(PATH, SECTION, KEY, DEFAULT_VALUE);
 ```
 
 - `path`: The path to the INI file.
 - `section`: The section from which reading will be performed.
 - `key`: The key by which the reading will be performed.
+- `default_value`: default value will be used in case of error, `it does not have to be specified`
 
 The method returns the corresponding data type from the specified key.
 
@@ -86,6 +87,9 @@ string key1 = INIReader.GetString(iniFilePath, "Section1", "Key1");
 
 // Modify data
 INIReader.SetKey(iniFilePath, "Section1", "Key2", key1);
+
+// Read data from the INI file with default value, default value will be used in case of error
+string key2 = INIReader.GetString(iniFilePath, "Section1", "Key2", "default");
 ```
 
 ## Developer
@@ -94,6 +98,6 @@ This class is developed by [Lonewolf239](https://github.com/Lonewolf239).
 
 ## Version
 
-1.1
+1.2
 
 `Feel free to customize and enhance the code according to your specific requirements.`

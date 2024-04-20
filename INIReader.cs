@@ -9,7 +9,7 @@ namespace IniReader
     /// <br></br>
     /// Developer: <a href="https://github.com/Lonewolf239">Lonewolf239</a>
     /// <br></br>
-    /// <b>Version: 1.1</b>
+    /// <b>Version: 1.2</b>
     /// </summary>
     internal class INIReader
     {
@@ -156,7 +156,7 @@ namespace IniReader
             }
         }
 
-        /// <summary>This is a method for creating an INI file if it is exist/summary>
+        /// <summary>This is a method for creating an INI file if it is exist</summary>
         /// <param name="path">Path to the INI file.</param>
         /// <param name="data">An array of strings representing the data to be written to the file.</param>
         /// <returns>
@@ -259,7 +259,18 @@ namespace IniReader
         /// <returns>Boolean value</returns>
         public static bool GetBool(string path, string section, string key)
         {
-            bool result = false;
+            return GetBool(path, section, key, false);
+        }
+
+        /// <summary>This is a method for reading a boolean value from an INI file</summary>
+        /// <param name="path">Path to the INI file.</param>
+        /// <param name="section">The section from which reading will be performed.</param>
+        /// <param name="key">The key by which the reading will be performed.</param>
+        /// <param name="default_value">The default value that will be returned in case of a read error.</param>
+        /// <returns>Boolean value</returns>
+        public static bool GetBool(string path, string section, string key, bool default_value)
+        {
+            bool result = default_value;
             try
             {
                 string[][] data = GetData(path);
@@ -282,12 +293,12 @@ namespace IniReader
                         }
                     }
                 }
+                return result;
             }
             catch
             {
-                result = false;
+                return default_value;
             }
-            return result;
         }
 
         /// <summary>This is a method for reading an integer value from an INI file</summary>
@@ -297,7 +308,18 @@ namespace IniReader
         /// <returns>Integer value</returns>
         public static int GetInt(string path, string section, string key)
         {
-            int result = 0;
+            return GetInt(path, section, key, 0);
+        }
+
+        /// <summary>This is a method for reading an integer value from an INI file</summary>
+        /// <param name="path">Path to the INI file.</param>
+        /// <param name="section">The section from which reading will be performed.</param>
+        /// <param name="key">The key by which the reading will be performed.</param>
+        /// <param name="default_value">The default value that will be returned in case of a read error.</param>
+        /// <returns>Integer value</returns>
+        public static int GetInt(string path, string section, string key, int default_value)
+        {
+            int result = default_value;
             try
             {
                 string[][] data = GetData(path);
@@ -319,12 +341,12 @@ namespace IniReader
                         }
                     }
                 }
+                return result;
             }
             catch
             {
-                result = 0;
+                return default_value;
             }
-            return result;
         }
 
         /// <summary>This is a method for reading a numeric floating point value from an INI file</summary>
@@ -334,7 +356,18 @@ namespace IniReader
         /// <returns>Floating point numeric value</returns>
         public static float GetSingle(string path, string section, string key)
         {
-            float result = 0;
+            return GetSingle(path, section, key, 0);
+        }
+
+        /// <summary>This is a method for reading a numeric floating point value from an INI file</summary>
+        /// <param name="path">Path to the INI file.</param>
+        /// <param name="section">The section from which reading will be performed.</param>
+        /// <param name="key">The key by which the reading will be performed.</param>
+        /// <param name="default_value">The default value that will be returned in case of a read error.</param>
+        /// <returns>Floating point numeric value</returns>
+        public static float GetSingle(string path, string section, string key, float default_value)
+        {
+            float result = default_value;
             try
             {
                 string[][] data = GetData(path);
@@ -356,12 +389,12 @@ namespace IniReader
                         }
                     }
                 }
+                return result;
             }
             catch
             {
-                result = 0;
+                return default_value;
             }
-            return result;
         }
 
         /// <summary>This is a method for reading a high precision floating point numeric value from an INI file</summary>
@@ -371,7 +404,18 @@ namespace IniReader
         /// <returns>High precision floating point numeric value</returns>
         public static double GetDouble(string path, string section, string key)
         {
-            double result = 0;
+            return GetDouble(path, section, key, 0);
+        }
+
+        /// <summary>This is a method for reading a high precision floating point numeric value from an INI file</summary>
+        /// <param name="path">Path to the INI file.</param>
+        /// <param name="section">The section from which reading will be performed.</param>
+        /// <param name="key">The key by which the reading will be performed.</param>
+        /// <param name="default_value">The default value that will be returned in case of a read error.</param>
+        /// <returns>High precision floating point numeric value</returns>
+        public static double GetDouble(string path, string section, string key, double default_value)
+        {
+            double result = default_value;
             try
             {
                 string[][] data = GetData(path);
@@ -393,12 +437,12 @@ namespace IniReader
                         }
                     }
                 }
+                return default_value;
             }
             catch
             {
-                result = 0;
+                return result;
             }
-            return result;
         }
 
         /// <summary>This is a method for reading a line from an INI file</summary>
@@ -410,7 +454,20 @@ namespace IniReader
         /// </returns>
         public static string GetString(string path, string section, string key)
         {
-            string result = null;
+            return GetString(path, section, key, "");
+        }
+
+        /// <summary>This is a method for reading a line from an INI file</summary>
+        /// <param name="path">Path to the INI file.</param>
+        /// <param name="section">The section from which reading will be performed.</param>
+        /// <param name="key">The key by which the reading will be performed.</param>
+        /// <param name="default_value">The default value that will be returned in case of a read error.</param>
+        /// <returns>
+        /// Line
+        /// </returns>
+        public static string GetString(string path, string section, string key, string default_value)
+        {
+            string result = default_value;
             try
             {
                 string[][] data = GetData(path);
@@ -436,7 +493,7 @@ namespace IniReader
             }
             catch
             {
-                return null;
+                return default_value;
             }
         }
 
