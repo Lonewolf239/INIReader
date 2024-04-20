@@ -15,7 +15,7 @@ INIReader is a C# class for working with INI files. It provides methods for crea
 To create an INI file if it doesn't exist, use one of the following methods:
 
 ```cs
-CreateIniFileIfNotExist(PATH, DATA);
+INIReader.CreateIniFileIfNotExist(PATH, DATA);
 ```
 
 - `path`: The path to the INI file.
@@ -29,7 +29,7 @@ The method returns:
 To recreate an existing file, use one of the following methods:
 
 ```cs
-CreateIniFile(PATH, DATA);
+INIReader.CreateIniFile(PATH, DATA);
 ```
 
 - `path`: The path to the INI file.
@@ -44,11 +44,11 @@ The method returns:
 To read data from an INI file, use one of the following methods:
 
 ```cs
-GetString(PATH, SECTION, KEY);
-GetBool(PATH, SECTION, KEY);
-GetInt(PATH, SECTION, KEY);
-GetSingle(PATH, SECTION, KEY);
-GetDouble(PATH, SECTION, KEY);
+INIReader.GetString(PATH, SECTION, KEY);
+INIReader.GetBool(PATH, SECTION, KEY);
+INIReader.GetInt(PATH, SECTION, KEY);
+INIReader.GetSingle(PATH, SECTION, KEY);
+INIReader.GetDouble(PATH, SECTION, KEY);
 ```
 
 - `path`: The path to the INI file.
@@ -62,13 +62,13 @@ The method returns the corresponding data type from the specified key.
 To save data to an INI file, use one of the following methods:
 
 ```cs
-SetKey(PATH, SECTION, KEY, VALUE);
+INIReader.SetKey(PATH, SECTION, KEY, VALUE);
 ```
 
 - `path`: The path to the INI file.
 - `section`: The section where the data will be written.
 - `key`: The key under which the data will be stored.
-- `value`: the value that will be written to the file. `value` accepts: string, bool, int, float, double
+- `value`: the value that will be written to the file, `accepts: string, bool, int, float, double`
 
 The method returns `true` if the data is saved successfully, otherwise `false`.
 
