@@ -15,8 +15,7 @@ INIReader is a C# class for working with INI files. It provides methods for crea
 To create an INI file if it doesn't exist, use one of the following methods:
 
 ```cs
-CreateIniFileIfNotExist(string path, string[] data);
-CreateIniFileIfNotExist(string path, string data);
+CreateIniFileIfNotExist(PATH, DATA);
 ```
 
 - `path`: The path to the INI file.
@@ -30,8 +29,7 @@ The method returns:
 To recreate an existing file, use one of the following methods:
 
 ```cs
-CreateIniFile(string path, string[] data);
-CreateIniFile(string path, string data);
+CreateIniFile(PATH, DATA);
 ```
 
 - `path`: The path to the INI file.
@@ -46,11 +44,11 @@ The method returns:
 To read data from an INI file, use one of the following methods:
 
 ```cs
-GetBool(string path, string section, string key);
-GetInt(string path, string section, string key);
-GetSingle(string path, string section, string key);
-GetDouble(string path, string section, string key);
-GetString(string path, string section, string key);
+GetString(PATH, SECTION, KEY);
+GetBool(PATH, SECTION, KEY);
+GetInt(PATH, SECTION, KEY);
+GetSingle(PATH, SECTION, KEY);
+GetDouble(PATH, SECTION, KEY);
 ```
 
 - `path`: The path to the INI file.
@@ -64,17 +62,13 @@ The method returns the corresponding data type from the specified key.
 To save data to an INI file, use one of the following methods:
 
 ```cs
-SetKey(string path, string section, string key, string value);
-SetKey(string path, string section, string key, bool value);
-SetKey(string path, string section, string key, int value);
-SetKey(string path, string section, string key, float value);
-SetKey(string path, string section, string key, double value);
+SetKey(PATH, SECTION, KEY, VALUE);
 ```
 
 - `path`: The path to the INI file.
 - `section`: The section where the data will be written.
 - `key`: The key under which the data will be stored.
-- `value`: The value to be written to the file.
+- `value`: the value that will be written to the file. `value` accepts: string, bool, int, float, double
 
 The method returns `true` if the data is saved successfully, otherwise `false`.
 
@@ -100,6 +94,6 @@ This class is developed by [Lonewolf239](https://github.com/Lonewolf239).
 
 ## Version
 
-1.0
+1.1
 
 `Feel free to customize and enhance the code according to your specific requirements.`
