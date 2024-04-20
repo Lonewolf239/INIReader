@@ -12,7 +12,7 @@ INIReader is a C# class for working with INI files. It provides methods for crea
 
 ### Creating an INI File
 
-To create an INI file if it doesn't exist, use one of the following methods:
+To create an INI file if it doesn't exist, use one of the following method:
 
 ```cs
 INIReader.CreateIniFileIfNotExist(PATH, DATA);
@@ -26,7 +26,7 @@ The method returns:
 - `0` if the file already exists.
 - `1` if the file is created successfully.
 
-To recreate an existing file, use one of the following methods:
+To recreate an existing file, use one of the following method:
 
 ```cs
 INIReader.CreateIniFile(PATH, DATA);
@@ -59,7 +59,7 @@ The method returns the corresponding data type from the specified key.
 
 ### Saving Data to an INI File
 
-To save data to an INI file, use one of the following methods:
+To save data to an INI file, use one of the following method:
 
 ```cs
 INIReader.SetKey(PATH, SECTION, KEY, VALUE);
