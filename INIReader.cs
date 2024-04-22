@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace IniReader
 {
@@ -9,7 +10,7 @@ namespace IniReader
     /// <br></br>
     /// Developer: <a href="https://github.com/Lonewolf239">Lonewolf239</a>
     /// <br></br>
-    /// <b>Version: 1.2</b>
+    /// <b>Version: 1.3</b>
     /// </summary>
     internal class INIReader
     {
@@ -252,6 +253,62 @@ namespace IniReader
             }
         }
 
+        /// <summary>This is a method of adding a new key to the end of a section</summary>
+        /// <param name="path">Path to the INI file.</param>
+        /// <param name="section">The section to which the recording will be made.</param>
+        /// <param name="key">The key that will be created.</param>
+        /// <param name="value">The value that will be written to the key.</param>
+        /// <returns>
+        /// <b>True</b> if the operation was successful.
+        /// <br></br><b>False</b> if an error occurred during execution.
+        /// </returns>
+        public static bool AddKeyInSection(string path, string section, string key, bool value)
+        {
+            return AddKeyInSection(path, section, key, Convert.ToString(value));
+        }
+
+        /// <summary>This is a method of adding a new key to the end of a section</summary>
+        /// <param name="path">Path to the INI file.</param>
+        /// <param name="section">The section to which the recording will be made.</param>
+        /// <param name="key">The key that will be created.</param>
+        /// <param name="value">The value that will be written to the key.</param>
+        /// <returns>
+        /// <b>True</b> if the operation was successful.
+        /// <br></br><b>False</b> if an error occurred during execution.
+        /// </returns>
+        public static bool AddKeyInSection(string path, string section, string key, int value)
+        {
+            return AddKeyInSection(path, section, key, Convert.ToString(value));
+        }
+
+        /// <summary>This is a method of adding a new key to the end of a section</summary>
+        /// <param name="path">Path to the INI file.</param>
+        /// <param name="section">The section to which the recording will be made.</param>
+        /// <param name="key">The key that will be created.</param>
+        /// <param name="value">The value that will be written to the key.</param>
+        /// <returns>
+        /// <b>True</b> if the operation was successful.
+        /// <br></br><b>False</b> if an error occurred during execution.
+        /// </returns>
+        public static bool AddKeyInSection(string path, string section, string key, float value)
+        {
+            return AddKeyInSection(path, section, key, Convert.ToString(value));
+        }
+
+        /// <summary>This is a method of adding a new key to the end of a section</summary>
+        /// <param name="path">Path to the INI file.</param>
+        /// <param name="section">The section to which the recording will be made.</param>
+        /// <param name="key">The key that will be created.</param>
+        /// <param name="value">The value that will be written to the key.</param>
+        /// <returns>
+        /// <b>True</b> if the operation was successful.
+        /// <br></br><b>False</b> if an error occurred during execution.
+        /// </returns>
+        public static bool AddKeyInSection(string path, string section, string key, double value)
+        {
+            return AddKeyInSection(path, section, key, Convert.ToString(value));
+        }
+
         /// <summary>This is a method for reading a boolean value from an INI file</summary>
         /// <param name="path">Path to the INI file.</param>
         /// <param name="section">The section from which reading will be performed.</param>
@@ -273,6 +330,7 @@ namespace IniReader
             bool result = default_value;
             try
             {
+                bool key_exist = false;
                 string[][] data = GetData(path);
                 for (int i = 0; i < data.Length; i++)
                 {
@@ -283,6 +341,7 @@ namespace IniReader
                         {
                             if (keys.Contains(key))
                             {
+                                key_exist = true;
                                 string[] parts = keys.Split('=');
                                 parts[0] = parts[0].Trim();
                                 parts[1] = parts[1].Trim();
@@ -291,6 +350,8 @@ namespace IniReader
                                 break;
                             }
                         }
+                        if (!key_exist)
+                            AddKeyInSection(path, section, key, default_value);
                     }
                 }
                 return result;
@@ -322,6 +383,7 @@ namespace IniReader
             int result = default_value;
             try
             {
+                bool key_exist = false;
                 string[][] data = GetData(path);
                 for (int i = 0; i < data.Length; i++)
                 {
@@ -332,6 +394,7 @@ namespace IniReader
                         {
                             if (keys.Contains(key))
                             {
+                                key_exist = true;
                                 string[] parts = keys.Split('=');
                                 parts[0] = parts[0].Trim();
                                 parts[1] = parts[1].Trim();
@@ -339,6 +402,8 @@ namespace IniReader
                                 break;
                             }
                         }
+                        if (!key_exist)
+                            AddKeyInSection(path, section, key, default_value);
                     }
                 }
                 return result;
@@ -370,6 +435,7 @@ namespace IniReader
             float result = default_value;
             try
             {
+                bool key_exist = false;
                 string[][] data = GetData(path);
                 for (int i = 0; i < data.Length; i++)
                 {
@@ -380,6 +446,7 @@ namespace IniReader
                         {
                             if (keys.Contains(key))
                             {
+                                key_exist = true;
                                 string[] parts = keys.Split('=');
                                 parts[0] = parts[0].Trim();
                                 parts[1] = parts[1].Trim();
@@ -387,6 +454,8 @@ namespace IniReader
                                 break;
                             }
                         }
+                        if (!key_exist)
+                            AddKeyInSection(path, section, key, default_value);
                     }
                 }
                 return result;
@@ -418,6 +487,7 @@ namespace IniReader
             double result = default_value;
             try
             {
+                bool key_exist = false;
                 string[][] data = GetData(path);
                 for (int i = 0; i < data.Length; i++)
                 {
@@ -428,6 +498,7 @@ namespace IniReader
                         {
                             if (keys.Contains(key))
                             {
+                                key_exist = true;
                                 string[] parts = keys.Split('=');
                                 parts[0] = parts[0].Trim();
                                 parts[1] = parts[1].Trim();
@@ -435,6 +506,8 @@ namespace IniReader
                                 break;
                             }
                         }
+                        if (!key_exist)
+                            AddKeyInSection(path, section, key, default_value);
                     }
                 }
                 return default_value;
@@ -470,6 +543,7 @@ namespace IniReader
             string result = default_value;
             try
             {
+                bool key_exist = false;
                 string[][] data = GetData(path);
                 for (int i = 0; i < data.Length; i++)
                 {
@@ -480,6 +554,7 @@ namespace IniReader
                         {
                             if (keys.Contains(key))
                             {
+                                key_exist = true;
                                 string[] parts = keys.Split('=');
                                 parts[0] = parts[0].Trim();
                                 parts[1] = parts[1].Trim();
@@ -487,6 +562,8 @@ namespace IniReader
                                 break;
                             }
                         }
+                        if (!key_exist)
+                            AddKeyInSection(path, section, key, default_value);
                     }
                 }
                 return result;
@@ -512,7 +589,9 @@ namespace IniReader
         {
             try
             {
+                bool key_exist = false;
                 string[][] data = GetData(path);
+                string[] parts = new string[2];
                 for (int i = 0; i < data.Length; i++)
                 {
                     if (data[i][0].Contains(section))
@@ -522,13 +601,16 @@ namespace IniReader
                         {
                             if (sections[j].Contains(key))
                             {
-                                string[] parts = sections[j].Split('=');
+                                key_exist = true;
+                                parts = sections[j].Split('=');
                                 parts[0] = parts[0].Trim();
                                 parts[1] = value;
                                 sections[j] = parts[0] + " = " + parts[1];
                                 break;
                             }
                         }
+                        if (!key_exist)
+                            sections.Append(parts[0] + " = " + parts[1]);
                         data[i] = sections;
                     }
                 }
