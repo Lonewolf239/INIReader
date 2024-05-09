@@ -41,19 +41,11 @@ namespace IniReader
             return result;
         }
 
-        private static bool SaveFile(string path, string[][] data)
+        private static void SaveFile(string path, string[][] data)
         {
-            try
-            {
-                File.Delete(path);
-                foreach (string[] lines in data)
-                    File.AppendAllLines(path, lines);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            File.Delete(path);
+            foreach (string[] lines in data)
+                File.AppendAllLines(path, lines);
         }
 
         /// <summary>
@@ -108,112 +100,45 @@ namespace IniReader
         /// <summary>This is a method for creating an INI file if it is missing</summary>
         /// <param name="path">Path to the INI file.</param>
         /// <param name="data">An array of strings representing the data to be written to the file.</param>
-        /// <returns>
-        /// If an error occurred during file creation: <b>-1</b><br></br>
-        /// If the file exists: <b>0</b><br></br>
-        /// If the file is created successfully: <b>1</b>
-        /// </returns>
-        public static int CreateIniFileIfNotExist(string path, string[] data)
+        public static void CreateIniFileIfNotExist(string path, string[] data)
         {
-            if (File.Exists(path))
-                return 0;
-            else
-            {
-                try
-                {
-                    File.WriteAllLines(path, data);
-                    return 1;
-                }
-                catch
-                {
-                    return -1;
-                }
-            }
+            if (!File.Exists(path))
+                File.WriteAllLines(path, data);
         }
 
         /// <summary>This is a method for creating an INI file if it is missing</summary>
         /// <param name="path">Path to the INI file.</param>
         /// <param name="data">A string representing the data to be written to the file.</param>
-        /// <returns>
-        /// If an error occurred during file creation: <b>-1</b><br></br>
-        /// If the file exists: <b>0</b><br></br>
-        /// If the file is created successfully: <b>1</b>
-        /// </returns>
-        public static int CreateIniFileIfNotExist(string path, string data)
+        public static void CreateIniFileIfNotExist(string path, string data)
         {
-            if (File.Exists(path))
-                return 0;
-            else
-            {
-                try
-                {
-                    File.WriteAllText(path, data);
-                    return 1;
-                }
-                catch
-                {
-                    return -1;
-                }
-            }
-        }
-
-        /// <summary>This is a method for creating an INI file if it is exist</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="data">An array of strings representing the data to be written to the file.</param>
-        /// <returns>
-        /// <b>False</b> - if an error occurred during file creation<br></br>
-        /// <b>True</b> - if the file is created successfully
-        /// </returns>
-        public static bool CreateIniFile(string path, string[] data)
-        {
-            try
-            {
-                File.WriteAllLines(path, data);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        /// <summary>This is a method for creating an INI file if it is exist</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="data">A string representing the data to be written to the file.</param>
-        /// <returns>
-        /// <b>False</b> - if an error occurred during file creation<br></br>
-        /// <b>True</b> - if the file is created successfully
-        /// </returns>
-        public static bool CreateIniFile(string path, string data)
-        {
-            try
+            if (!File.Exists(path))
             {
                 File.WriteAllText(path, data);
-                return true;
-            }
-            catch
-            {
-                return false;
             }
         }
 
-        /// <summary>This is a method of adding a new section to the end of the file</summary>
+        /// <summary>This is a method for creating an INI file if it exists</summary>
         /// <param name="path">Path to the INI file.</param>
-        /// <returns>
-        /// <b>True</b> if the operation was successful.
-        /// <br></br><b>False</b> if an error occurred during execution.
-        /// </returns>
-        public static bool AddSection(string path, string section)
+        /// <param name="data">An array of strings representing the data to be written to the file.</param>
+        public static void CreateIniFile(string path, string[] data)
         {
-            try
-            {
-                File.AppendAllText(path, $"[{section}]");
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            File.WriteAllLines(path, data);
+        }
+
+        /// <summary>This is a method for creating an INI file if it exists</summary>
+        /// <param name="path">Path to the INI file.</param>
+        /// <param name="data">A string representing the data to be written to the file.</param>
+        public static void CreateIniFile(string path, string data)
+        {
+            File.WriteAllText(path, data);
+        }
+
+        /// <summary>This is a method for adding a new section to the end of the file</summary>
+        /// <param name="path">Path to the INI file.</param>
+        /// <param name="section">The section to write to.</param>
+        public static void AddSection(string path, string section)
+        {
+            File.AppendAllText(path, $"[{section}]");
         }
 
         /// <summary>This is a method of adding a new key to the end of a section</summary>
@@ -221,111 +146,33 @@ namespace IniReader
         /// <param name="section">The section to which the recording will be made.</param>
         /// <param name="key">The key that will be created.</param>
         /// <param name="value">The value that will be written to the key.</param>
-        /// <returns>
-        /// <b>True</b> if the operation was successful.
-        /// <br></br><b>False</b> if an error occurred during execution.
-        /// </returns>
-        public static bool AddKeyInSection(string path, string section, string key, string value)
+        public static void AddKeyInSection<T>(string path, string section, string key, T value)
         {
-            try
+            string string_value = value.ToString();
+            List<string> list = new List<string>();
+            string[][] data = GetData(path);
+            int i = -1;
+            foreach (string[] name_section in data)
             {
-                List<string> list = new List<string>();
-                string[][] data = GetData(path);
-                int i = -1;
-                foreach (string[] name_section in data)
+                i++;
+                if (name_section[0].Contains(section))
                 {
-                    i++;
-                    if (name_section[0].Contains(section))
-                    {
-                        list.AddRange(name_section);
-                        list.Add(key + " = " + value);
-                        break;
-                    }
+                    list.AddRange(name_section);
+                    list.Add(key + " = " + string_value);
+                    break;
                 }
-                data[i] = list.ToArray();
-                File.Delete(path);
-                SaveFile(path, data);
-                return true;
             }
-            catch
-            {
-                return false;
-            }
+            data[i] = list.ToArray();
+            File.Delete(path);
+            SaveFile(path, data);
         }
-
-        /// <summary>This is a method of adding a new key to the end of a section</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section to which the recording will be made.</param>
-        /// <param name="key">The key that will be created.</param>
-        /// <param name="value">The value that will be written to the key.</param>
-        /// <returns>
-        /// <b>True</b> if the operation was successful.
-        /// <br></br><b>False</b> if an error occurred during execution.
-        /// </returns>
-        public static bool AddKeyInSection(string path, string section, string key, bool value)
-        {
-            return AddKeyInSection(path, section, key, Convert.ToString(value));
-        }
-
-        /// <summary>This is a method of adding a new key to the end of a section</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section to which the recording will be made.</param>
-        /// <param name="key">The key that will be created.</param>
-        /// <param name="value">The value that will be written to the key.</param>
-        /// <returns>
-        /// <b>True</b> if the operation was successful.
-        /// <br></br><b>False</b> if an error occurred during execution.
-        /// </returns>
-        public static bool AddKeyInSection(string path, string section, string key, int value)
-        {
-            return AddKeyInSection(path, section, key, Convert.ToString(value));
-        }
-
-        /// <summary>This is a method of adding a new key to the end of a section</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section to which the recording will be made.</param>
-        /// <param name="key">The key that will be created.</param>
-        /// <param name="value">The value that will be written to the key.</param>
-        /// <returns>
-        /// <b>True</b> if the operation was successful.
-        /// <br></br><b>False</b> if an error occurred during execution.
-        /// </returns>
-        public static bool AddKeyInSection(string path, string section, string key, float value)
-        {
-            return AddKeyInSection(path, section, key, Convert.ToString(value));
-        }
-
-        /// <summary>This is a method of adding a new key to the end of a section</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section to which the recording will be made.</param>
-        /// <param name="key">The key that will be created.</param>
-        /// <param name="value">The value that will be written to the key.</param>
-        /// <returns>
-        /// <b>True</b> if the operation was successful.
-        /// <br></br><b>False</b> if an error occurred during execution.
-        /// </returns>
-        public static bool AddKeyInSection(string path, string section, string key, double value)
-        {
-            return AddKeyInSection(path, section, key, Convert.ToString(value));
-        }
-
-        /// <summary>This is a method for reading a boolean value from an INI file</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section from which reading will be performed.</param>
-        /// <param name="key">The key by which the reading will be performed.</param>
-        /// <returns>Boolean value</returns>
-        public static bool GetBool(string path, string section, string key)
-        {
-            return GetBool(path, section, key, false);
-        }
-
         /// <summary>This is a method for reading a boolean value from an INI file</summary>
         /// <param name="path">Path to the INI file.</param>
         /// <param name="section">The section from which reading will be performed.</param>
         /// <param name="key">The key by which the reading will be performed.</param>
         /// <param name="default_value">The default value that will be returned in case of a read error.</param>
         /// <returns>Boolean value</returns>
-        public static bool GetBool(string path, string section, string key, bool default_value)
+        public static bool GetBool(string path, string section, string key, bool default_value = false)
         {
             bool result = default_value;
             try
@@ -366,19 +213,9 @@ namespace IniReader
         /// <param name="path">Path to the INI file.</param>
         /// <param name="section">The section from which reading will be performed.</param>
         /// <param name="key">The key by which the reading will be performed.</param>
-        /// <returns>Integer value</returns>
-        public static int GetInt(string path, string section, string key)
-        {
-            return GetInt(path, section, key, 0);
-        }
-
-        /// <summary>This is a method for reading an integer value from an INI file</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section from which reading will be performed.</param>
-        /// <param name="key">The key by which the reading will be performed.</param>
         /// <param name="default_value">The default value that will be returned in case of a read error.</param>
         /// <returns>Integer value</returns>
-        public static int GetInt(string path, string section, string key, int default_value)
+        public static int GetInt(string path, string section, string key, int default_value = 0)
         {
             int result = default_value;
             try
@@ -418,19 +255,9 @@ namespace IniReader
         /// <param name="path">Path to the INI file.</param>
         /// <param name="section">The section from which reading will be performed.</param>
         /// <param name="key">The key by which the reading will be performed.</param>
-        /// <returns>Floating point numeric value</returns>
-        public static float GetSingle(string path, string section, string key)
-        {
-            return GetSingle(path, section, key, 0);
-        }
-
-        /// <summary>This is a method for reading a numeric floating point value from an INI file</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section from which reading will be performed.</param>
-        /// <param name="key">The key by which the reading will be performed.</param>
         /// <param name="default_value">The default value that will be returned in case of a read error.</param>
         /// <returns>Floating point numeric value</returns>
-        public static float GetSingle(string path, string section, string key, float default_value)
+        public static float GetSingle(string path, string section, string key, float default_value = 0)
         {
             float result = default_value;
             try
@@ -470,19 +297,9 @@ namespace IniReader
         /// <param name="path">Path to the INI file.</param>
         /// <param name="section">The section from which reading will be performed.</param>
         /// <param name="key">The key by which the reading will be performed.</param>
-        /// <returns>High precision floating point numeric value</returns>
-        public static double GetDouble(string path, string section, string key)
-        {
-            return GetDouble(path, section, key, 0);
-        }
-
-        /// <summary>This is a method for reading a high precision floating point numeric value from an INI file</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section from which reading will be performed.</param>
-        /// <param name="key">The key by which the reading will be performed.</param>
         /// <param name="default_value">The default value that will be returned in case of a read error.</param>
         /// <returns>High precision floating point numeric value</returns>
-        public static double GetDouble(string path, string section, string key, double default_value)
+        public static double GetDouble(string path, string section, string key, double default_value = 0)
         {
             double result = default_value;
             try
@@ -522,23 +339,11 @@ namespace IniReader
         /// <param name="path">Path to the INI file.</param>
         /// <param name="section">The section from which reading will be performed.</param>
         /// <param name="key">The key by which the reading will be performed.</param>
-        /// <returns>
-        /// Line
-        /// </returns>
-        public static string GetString(string path, string section, string key)
-        {
-            return GetString(path, section, key, "");
-        }
-
-        /// <summary>This is a method for reading a line from an INI file</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section from which reading will be performed.</param>
-        /// <param name="key">The key by which the reading will be performed.</param>
         /// <param name="default_value">The default value that will be returned in case of a read error.</param>
         /// <returns>
         /// Line
         /// </returns>
-        public static string GetString(string path, string section, string key, string default_value)
+        public static string GetString(string path, string section, string key, string default_value = "")
         {
             string result = default_value;
             try
@@ -581,104 +386,35 @@ namespace IniReader
         /// <param name="section">The section to which the recording will be made.</param>
         /// <param name="key">The key by which the recording will be made.</param>
         /// <param name="value">The value that should be written to the file.</param>
-        /// <returns>
-        /// <b>True</b> if the operation was successful.
-        /// <br></br><b>False</b> if an error occurred during execution.
-        /// </returns>
-        public static bool SetKey(string path, string section, string key, string value)
+        public static void SetKey<T>(string path, string section, string key, T value)
         {
-            try
+            string string_value = value.ToString();
+            bool key_exist = false;
+            string[][] data = GetData(path);
+            string[] parts = new string[2];
+            for (int i = 0; i < data.Length; i++)
             {
-                bool key_exist = false;
-                string[][] data = GetData(path);
-                string[] parts = new string[2];
-                for (int i = 0; i < data.Length; i++)
+                if (data[i][0].Contains(section))
                 {
-                    if (data[i][0].Contains(section))
+                    string[] sections = data[i];
+                    for (int j = 0; j < sections.Length; j++)
                     {
-                        string[] sections = data[i];
-                        for (int j = 0;j < sections.Length;j++)
+                        if (sections[j].Contains(key))
                         {
-                            if (sections[j].Contains(key))
-                            {
-                                key_exist = true;
-                                parts = sections[j].Split('=');
-                                parts[0] = parts[0].Trim();
-                                parts[1] = value;
-                                sections[j] = parts[0] + " = " + parts[1];
-                                break;
-                            }
+                            key_exist = true;
+                            parts = sections[j].Split('=');
+                            parts[0] = parts[0].Trim();
+                            parts[1] = string_value;
+                            sections[j] = parts[0] + " = " + parts[1];
+                            break;
                         }
-                        if (!key_exist)
-                            sections.Append(parts[0] + " = " + parts[1]);
-                        data[i] = sections;
                     }
+                    if (!key_exist)
+                        sections.Append(parts[0] + " = " + parts[1]);
+                    data[i] = sections;
                 }
-                if (SaveFile(path, data))
-                    return true;
-                else
-                    return false;
             }
-            catch
-            {
-                return false;
-            }
-        }
-
-        /// <summary>This is a method for writing a boolean value to an INI file</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section to which the recording will be made.</param>
-        /// <param name="key">The key by which the recording will be made.</param>
-        /// <param name="value">The value that should be written to the file.</param>
-        /// <returns>
-        /// <b>True</b> if the operation was successful.
-        /// <br></br><b>False</b> if an error occurred during execution.
-        /// </returns>
-        public static bool SetKey(string path, string section, string key, bool value)
-        {
-            return SetKey(path, section, key, Convert.ToString(value));
-        }
-
-        /// <summary>This is a method for writing a floating point numeric value to an INI file</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section to which the recording will be made.</param>
-        /// <param name="key">The key by which the recording will be made.</param>
-        /// <param name="value">The value that should be written to the file.</param>
-        /// <returns>
-        /// <b>True</b> if the operation was successful.
-        /// <br></br><b>False</b> if an error occurred during execution.
-        /// </returns>
-        public static bool SetKey(string path, string section, string key, float value)
-        {
-            return SetKey(path, section, key, Convert.ToString(value));
-        }
-
-        /// <summary>This is a method for writing a high-precision floating point numeric value to an INI file</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section to which the recording will be made.</param>
-        /// <param name="key">The key by which the recording will be made.</param>
-        /// <param name="value">The value that should be written to the file.</param>
-        /// <returns>
-        /// <b>True</b> if the operation was successful.
-        /// <br></br><b>False</b> if an error occurred during execution.
-        /// </returns>
-        public static bool SetKey(string path, string section, string key, double value)
-        {
-            return SetKey(path, section, key, Convert.ToString(value));
-        }
-
-        /// <summary>This is a method for writing an integer value to an INI file</summary>
-        /// <param name="path">Path to the INI file.</param>
-        /// <param name="section">The section to which the recording will be made.</param>
-        /// <param name="key">The key by which the recording will be made.</param>
-        /// <param name="value">The value that should be written to the file.</param>
-        /// <returns>
-        /// <b>True</b> if the operation was successful.
-        /// <br></br><b>False</b> if an error occurred during execution.
-        /// </returns>
-        public static bool SetKey(string path, string section, string key, int value)
-        {
-            return SetKey(path, section, key, Convert.ToString(value));
+            SaveFile(path, data);
         }
     }
 }
