@@ -388,6 +388,13 @@ namespace IniReader
         /// <param name="value">The value that should be written to the file.</param>
         public static void SetKey<T>(string path, string section, string key, T value)
         {
+            if (!SectionExist(path, section))
+                AddSection(path, section);
+            if (!KeyExist(path, section, key))
+            {
+                AddKeyInSection(path, section, key, value); 
+                return;
+            }
             string string_value = value.ToString();
             bool key_exist = false;
             string[][] data = GetData(path);

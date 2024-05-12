@@ -96,6 +96,6 @@ string key2 = INIReader.GetString(iniFilePath, "Section1", "Key2", "default");
 
 This class is developed by [Lonewolf239](https://github.com/Lonewolf239).
 
-## Version 1.3
+## Version 1.3.1
 
 `Feel free to customize and enhance the code according to your specific requirements.`
