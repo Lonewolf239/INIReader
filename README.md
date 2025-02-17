@@ -17,12 +17,6 @@ INIReader reader = new INIReader(PATH);
 
 - `path`: The path to the INI file.
 
-To clear a file, use one of the following method:
-
-```cs
-reader.ClearFile();
-```
-
 ### Reading Data from an INI File
 
 To read data from an INI file, use one of the following methods:
