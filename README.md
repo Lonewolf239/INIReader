@@ -22,11 +22,12 @@ INIReader reader = new INIReader(PATH);
 To read data from an INI file, use one of the following methods:
 
 ```cs
-reader.GetString(SECTION, KEY, DEFAULT_VALUE);
-reader.GetBool(SECTION, KEY, DEFAULT_VALUE);
-reader.GetInt(SECTION, KEY, DEFAULT_VALUE);
-reader.GetSingle(SECTION, KEY, DEFAULT_VALUE);
-reader.GetDouble(SECTION, KEY, DEFAULT_VALUE);
+reader.GetString(SECTION, KEY, DEFAULT_VALUE); // Return string
+reader.GetBool(SECTION, KEY, DEFAULT_VALUE); // Return bool
+reader.GetInt(SECTION, KEY, DEFAULT_VALUE); // Return int
+reader.GetSingle(SECTION, KEY, DEFAULT_VALUE); // Return float
+reader.GetDouble(SECTION, KEY, DEFAULT_VALUE); // Return double
+reader.GetKeys(SECTION, KEY, DEFAULT_VALUE); // Return System.Windows.Forms.Keys
 ```
 
 - `section`: The section from which reading will be performed.
