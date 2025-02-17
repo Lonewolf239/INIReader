@@ -48,8 +48,6 @@ reader.SetKey(SECTION, KEY, VALUE);
 - `key`: The key under which the data will be stored.
 - `value`: the value that will be written to the file, `accepts any types`
 
-The method returns `true` if the data is saved successfully, otherwise `false`.
-
 ## Example
 
 ```cs
