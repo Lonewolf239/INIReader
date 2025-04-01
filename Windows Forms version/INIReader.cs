@@ -1,12 +1,13 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Windows.Forms;
 using System.Collections.Generic;
 
 namespace IniReader
 {
     /// <summary>
-    /// This is a class for working with INI files
+    /// This is a class for working with INI files (Windows Forms version)
     /// <br></br>
     /// Developer: <a href="https://github.com/Lonewolf239">Lonewolf239</a>
     /// <br></br>
@@ -123,6 +124,44 @@ namespace IniReader
             }
             Data[i] = list.ToArray();
             SaveFile();
+        }
+
+        /// <summary>This is a method for reading a keys value from an INI file</summary>
+        /// <param name="section">The section from which reading will be performed.</param>
+        /// <param name="key">The key by which the reading will be performed.</param>
+        /// <param name="default_value">The default value that will be returned in case of a read error.</param>
+        /// <returns>Keys value</returns>
+        public Keys GetKeys(string section, string key, Keys default_value = Keys.None)
+        {
+            Keys result = default_value;
+            try
+            {
+                bool key_exist = false;
+                for (int i = 0; i < Data.Count; i++)
+                {
+                    if (Data[i][0].Contains(section))
+                    {
+                        var sections = Data[i];
+                        foreach (var keys in sections)
+                        {
+                            if (keys.Contains(key))
+                            {
+                                key_exist = true;
+                                var parts = keys.Split('=');
+                                parts[0] = parts[0].Trim();
+                                parts[1] = parts[1].Trim();
+                                if (Keys.TryParse(parts[1], out Keys res))
+                                    result = res;
+                                break;
+                            }
+                        }
+                        if (!key_exist)
+                            AddKeyInSection(section, key, default_value);
+                    }
+                }
+                return result;
+            }
+            catch { return default_value; }
         }
 
         /// <summary>This is a method for reading a boolean value from an INI file</summary>
