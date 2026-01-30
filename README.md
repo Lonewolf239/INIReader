@@ -122,4 +122,4 @@ Files are stored with binary header (checksum + optional encryption).
 
 Developed by [Lonewolf239](https://github.com/Lonewolf239).
 
-## Version 1.5
+## Version 1.5.1
