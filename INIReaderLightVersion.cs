@@ -15,7 +15,7 @@ namespace IniReader;
 /// <br></br>
 /// <b>Target Framework: .NET 9+</b>
 /// <br></br>
-/// <b>Version: 1.5</b>
+/// <b>Version: 1.5.1</b>
 /// <br></br>
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
@@ -102,25 +102,21 @@ public class INIReader
     private static bool ValidateChecksum(byte[] data)
     {
         if (data.Length < 8) return false;
-        byte[] dataWithoutChecksum = data[..^8];
         byte[] checksumWithPlaceholder = new byte[data.Length];
-        Array.Copy(dataWithoutChecksum, 0, checksumWithPlaceholder, 0, dataWithoutChecksum.Length);
-        Array.Copy(new byte[8], 0, checksumWithPlaceholder, dataWithoutChecksum.Length, 8);
+        Array.Copy(data, checksumWithPlaceholder, data.Length - 8);
+        Array.Copy(new byte[8], 0, checksumWithPlaceholder, data.Length - 8, 8);
         byte[] calculatedChecksum = SHA256.HashData(checksumWithPlaceholder)[..8];
-        byte[] storedChecksum = data[^8..];
-        return storedChecksum.SequenceEqual(calculatedChecksum);
+        return data[^8..].SequenceEqual(calculatedChecksum);
     }
 
     private static byte[] AddChecksum(byte[] data)
     {
         byte[] checksumWithPlaceholder = new byte[data.Length + 8];
-        Array.Copy(data, 0, checksumWithPlaceholder, 0, data.Length);
+        Array.Copy(data, checksumWithPlaceholder, data.Length);
         Array.Copy(new byte[8], 0, checksumWithPlaceholder, data.Length, 8);
         byte[] checksum = SHA256.HashData(checksumWithPlaceholder)[..8];
-        byte[] result = new byte[data.Length + 8];
-        Array.Copy(data, 0, result, 0, data.Length);
-        Array.Copy(checksum, 0, result, data.Length, 8);
-        return result;
+        Array.Copy(checksum, 0, checksumWithPlaceholder, data.Length, 8);
+        return checksumWithPlaceholder;
     }
 
     #endregion
