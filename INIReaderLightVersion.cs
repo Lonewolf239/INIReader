@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,6 +9,7 @@ namespace IniReader;
 
 ///<summary>
 /// This is a class for working with INI files
+/// LightVersion without encryption
 /// <br></br>
 /// Developer: <a href="https://github.com/Lonewolf239">Lonewolf239</a>
 /// <br></br>
@@ -24,39 +25,15 @@ public class INIReader
     private readonly string FilePath;
     public bool AutoSave = true;
     public bool AutoAdd = true;
-    private bool AutoEncryption = false;
-    private string EncryptionPassword;
     private Lock Lock = new();
 
     public INIReader(string path, bool autoEncryption = false)
     {
         FilePath = path;
-        if (autoEncryption)
-        {
-            EncryptionPassword = GeneratePasswordFromUserId();
-            AutoEncryption = true;
-        }
         Data = GetData();
     }
 
     #region File System
-
-    private static string GeneratePasswordFromUserId(int length = 16)
-    {
-        string userId = Environment.UserName ?? Environment.GetEnvironmentVariable("USER") ?? "unknown";
-        string fullSeed = $"{userId}:{Environment.MachineName}:{Environment.UserDomainName ?? "local"}";
-        using (var sha256 = SHA256.Create())
-        {
-            byte[] seedBytes = Encoding.UTF8.GetBytes(fullSeed);
-            byte[] hash = sha256.ComputeHash(seedBytes);
-            StringBuilder password = new StringBuilder(length);
-            var rnd = new Random(BitConverter.ToInt32(hash, 0) ^ BitConverter.ToInt32(hash, 4));
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-            for (int i = 0; i < length; i++)
-                password.Append(chars[rnd.Next(chars.Length)]);
-            return password.ToString();
-        }
-    }
 
     private Dictionary<string, Dictionary<string, string>> GetData()
     {
@@ -94,27 +71,8 @@ public class INIReader
         {
             byte[] fileBytes = File.ReadAllBytes(FilePath);
             if (fileBytes.Length < 24) return null;
-            string content;
             if (!ValidateChecksum(fileBytes)) return null;
-            if (!AutoEncryption)
-            {
-                content = Encoding.UTF8.GetString(fileBytes, 0, fileBytes.Length - 8);
-                return content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
-            }
-            byte[] iv = new byte[16];
-            Array.Copy(fileBytes, 0, iv, 0, 16);
-            int encryptedLength = fileBytes.Length - 16 - 8;
-            byte[] encryptedContent = new byte[encryptedLength];
-            Array.Copy(fileBytes, 16, encryptedContent, 0, encryptedLength);
-            byte[] key = SHA256.HashData(Encoding.UTF8.GetBytes(EncryptionPassword))[..32];
-            using var aes = Aes.Create();
-            aes.Key = key;
-            aes.IV = iv;
-            using var decryptor = aes.CreateDecryptor();
-            using var ms = new MemoryStream(encryptedContent);
-            using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
-            using var sr = new StreamReader(cs, Encoding.UTF8);
-            content = sr.ReadToEnd();
+            string content = Encoding.UTF8.GetString(fileBytes, 0, fileBytes.Length - 8);
             return content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
         }
         catch { return null; }
@@ -135,27 +93,10 @@ public class INIReader
         }
         string fullText = string.Join(Environment.NewLine, content);
         byte[] plaintextBytes = Encoding.UTF8.GetBytes(fullText);
-        byte[] dataWithChecksum;
         ClearFile();
-        if (!AutoEncryption)
-        {
-            dataWithChecksum = AddChecksum(plaintextBytes);
-            File.WriteAllBytes(FilePath, dataWithChecksum);
-            return;
-        }
-        var key = SHA256.HashData(Encoding.UTF8.GetBytes(EncryptionPassword))[..32];
-        using var aes = Aes.Create();
-        aes.Key = key;
-        aes.GenerateIV();
-        using var encryptor = aes.CreateEncryptor();
-        using var ms = new MemoryStream();
-        ms.Write(aes.IV, 0, aes.IV.Length);
-        using var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write);
-        cs.Write(plaintextBytes, 0, plaintextBytes.Length);
-        cs.FlushFinalBlock();
-        byte[] encryptedData = ms.ToArray();
-        dataWithChecksum = AddChecksum(encryptedData);
+        var dataWithChecksum = AddChecksum(plaintextBytes);
         File.WriteAllBytes(FilePath, dataWithChecksum);
+        return;
     }
 
     private static bool ValidateChecksum(byte[] data)
