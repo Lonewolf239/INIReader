@@ -136,7 +136,6 @@ public class INIReader
         string fullText = string.Join(Environment.NewLine, content);
         byte[] plaintextBytes = Encoding.UTF8.GetBytes(fullText);
         byte[] dataWithChecksum;
-        ClearFile();
         if (!AutoEncryption)
         {
             dataWithChecksum = AddChecksum(plaintextBytes);
@@ -238,9 +237,6 @@ public class INIReader
         if (!SectionExists(sectionName)) return false;
         lock (Lock) return Data[sectionName].ContainsKey(keyName);
     }
-
-    /// <summary>This is a method to clear the INI file.</summary>
-    public void ClearFile() => File.WriteAllText(FilePath, string.Empty);
 
     /// <summary>This is a method for adding a new section to the end of the file</summary>
     /// <param name="section">The section to write to.</param>

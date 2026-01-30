@@ -27,7 +27,7 @@ public class INIReader
     public bool AutoAdd = true;
     private Lock Lock = new();
 
-    public INIReader(string path, bool autoEncryption = false)
+    public INIReader(string path)
     {
         FilePath = path;
         Data = GetData();
@@ -71,8 +71,9 @@ public class INIReader
         {
             byte[] fileBytes = File.ReadAllBytes(FilePath);
             if (fileBytes.Length < 24) return null;
+            string content;
             if (!ValidateChecksum(fileBytes)) return null;
-            string content = Encoding.UTF8.GetString(fileBytes, 0, fileBytes.Length - 8);
+            content = Encoding.UTF8.GetString(fileBytes, 0, fileBytes.Length - 8);
             return content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
         }
         catch { return null; }
@@ -93,8 +94,8 @@ public class INIReader
         }
         string fullText = string.Join(Environment.NewLine, content);
         byte[] plaintextBytes = Encoding.UTF8.GetBytes(fullText);
-        ClearFile();
-        var dataWithChecksum = AddChecksum(plaintextBytes);
+        byte[] dataWithChecksum;
+        dataWithChecksum = AddChecksum(plaintextBytes);
         File.WriteAllBytes(FilePath, dataWithChecksum);
         return;
     }
@@ -180,9 +181,6 @@ public class INIReader
         lock (Lock) return Data[sectionName].ContainsKey(keyName);
     }
 
-    /// <summary>This is a method to clear the INI file.</summary>
-    public void ClearFile() => File.WriteAllText(FilePath, string.Empty);
-
     /// <summary>This is a method for adding a new section to the end of the file</summary>
     /// <param name="section">The section to write to.</param>
     public void AddSection(string section)
@@ -236,11 +234,6 @@ public class INIReader
     public void SetKey<T>(string section, string key, T value)
     {
         if (!SectionExists(section)) AddSection(section);
-        if (!KeyExists(section, key))
-        {
-            AddKeyInSection(section, key, value);
-            return;
-        }
         lock (Lock) Data[section][key] = value.ToString().Trim();
         if (AutoSave) SaveFile();
     }
