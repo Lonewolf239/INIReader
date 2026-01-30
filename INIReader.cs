@@ -1,406 +1,341 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 
-namespace IniReader
+namespace IniReader;
+
+///<summary>
+/// This is a class for working with INI files
+/// <br></br>
+/// Developer: <a href="https://github.com/Lonewolf239">Lonewolf239</a>
+/// <br></br>
+/// <b>Target Framework: .NET 9+</b>
+/// <br></br>
+/// <b>Version: 1.5</b>
+/// <br></br>
+/// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
+/// </summary>
+public class INIReader
 {
-    /// <summary>
-    /// This is a class for working with INI files
-    /// <br></br>
-    /// Developer: <a href="https://github.com/Lonewolf239">Lonewolf239</a>
-    /// <br></br>
-    /// <b>Version: 1.4</b>
-    /// </summary>
-    public class INIReader
+    private readonly Dictionary<string, Dictionary<string, string>> Data;
+    private readonly string FilePath;
+    public bool AutoSave = true;
+    public bool AutoAdd = true;
+    private bool AutoEncryption = false;
+    private string EncryptionPassword;
+    private Lock Lock = new();
+
+    public INIReader(string path, bool autoEncryption = false)
     {
-        private readonly List<string[]> Data;
-        private readonly string Path;
-
-        public INIReader(string path)
+        FilePath = path;
+        if (autoEncryption)
         {
-            Path = path;
-            Data = GetData(path);
+            EncryptionPassword = GeneratePasswordFromUserId();
+            AutoEncryption = true;
         }
+        Data = GetData();
+    }
 
-        private static List<string[]> GetData(string path)
+    #region File System
+
+    private static string GeneratePasswordFromUserId(int length = 16)
+    {
+        string userId = Environment.UserName ?? Environment.GetEnvironmentVariable("USER") ?? "unknown";
+        string fullSeed = $"{userId}:{Environment.MachineName}:{Environment.UserDomainName ?? "local"}";
+        using (var sha256 = SHA256.Create())
         {
-            if (!File.Exists(path)) File.Create(path).Close();
-            var data = new List<string[]>();
-            var currentSection = new List<string>();
-            var file = File.ReadAllLines(path);
-            foreach (var line in file)
-            {
-                if (line.StartsWith("[") && line.EndsWith("]"))
-                {
-                    if (currentSection.Count > 0)
-                    {
-                        data.Add(currentSection.ToArray());
-                        currentSection.Clear();
-                    }
-                }
-                if (line.Length != 0)
-                    currentSection.Add(line);
-            }
-            if (currentSection.Count > 0)
-                data.Add(currentSection.ToArray());
-            return data;
-        }
-
-        private void SaveFile()
-        {
-            ClearFile();
-            foreach (var lines in Data)
-                File.AppendAllLines(Path, lines);
-        }
-
-        /// <summary>
-        /// Checks if a section exists in the specified path.
-        /// </summary>
-        /// <param name="section">The section to search for.</param>
-        /// <returns><b>True</b> if the section exists, <b>false</b> otherwise.</returns>
-        public bool SectionExist(string section)
-        {
-            foreach (var sections in Data)
-            {
-                if (sections[0].Contains(section))
-                    return true;
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// Checks if a key exists within a given section in the specified path.
-        /// </summary>
-        /// <param name="section">The section to search for.</param>
-        /// <param name="key">The key to search for within the section.</param>
-        /// <returns><b>True</b> if the key exists within the section, <b>false</b> otherwise.</returns>
-        public bool KeyExist(string section, string key)
-        {
-            foreach (var sections in Data)
-            {
-                if (sections[0].Contains(section))
-                {
-                    foreach (var keys in sections)
-                    {
-                        if (keys.Contains(key))
-                            return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        /// <summary>This is a method to clear the INI file.</summary>
-        public void ClearFile() => File.WriteAllText(Path, null);
-
-        /// <summary>This is a method for adding a new section to the end of the file</summary>
-        /// <param name="section">The section to write to.</param>
-        public void AddSection(string section)
-        {
-            Data.Add(new string[] { $"[{section}]" });
-            SaveFile();
-        }
-
-        /// <summary>This is a method of adding a new key to the end of a section</summary>
-        /// <param name="section">The section to which the recording will be made.</param>
-        /// <param name="key">The key that will be created.</param>
-        /// <param name="value">The value that will be written to the key.</param>
-        public void AddKeyInSection<T>(string section, string key, T value)
-        {
-            var string_value = value.ToString();
-            var list = new List<string>();
-            int i = -1;
-            foreach (var name_section in Data)
-            {
-                i++;
-                if (name_section[0].Contains(section))
-                {
-                    list.AddRange(name_section);
-                    list.Add(key + " = " + string_value);
-                    break;
-                }
-            }
-            Data[i] = list.ToArray();
-            SaveFile();
-        }
-
-        /// <summary>This is a method for reading a boolean value from an INI file</summary>
-        /// <param name="section">The section from which reading will be performed.</param>
-        /// <param name="key">The key by which the reading will be performed.</param>
-        /// <param name="default_value">The default value that will be returned in case of a read error.</param>
-        /// <returns>Boolean value</returns>
-        public bool GetBool(string section, string key, bool default_value = false)
-        {
-            bool result = default_value;
-            try
-            {
-                bool key_exist = false;
-                for (int i = 0; i < Data.Count; i++)
-                {
-                    if (Data[i][0].Contains(section))
-                    {
-                        var sections = Data[i];
-                        foreach (var keys in sections)
-                        {
-                            if (keys.Contains(key))
-                            {
-                                key_exist = true;
-                                var parts = keys.Split('=');
-                                parts[0] = parts[0].Trim();
-                                parts[1] = parts[1].Trim();
-                                if (bool.TryParse(parts[1], out bool res))
-                                    result = res;
-                                break;
-                            }
-                        }
-                        if (!key_exist)
-                            AddKeyInSection(section, key, default_value);
-                    }
-                }
-                return result;
-            }
-            catch { return default_value; }
-        }
-
-        /// <summary>This is a method for reading an integer value from an INI file</summary>
-        /// <param name="section">The section from which reading will be performed.</param>
-        /// <param name="key">The key by which the reading will be performed.</param>
-        /// <param name="default_value">The default value that will be returned in case of a read error.</param>
-        /// <returns>Integer value</returns>
-        public int GetInt(string section, string key, int default_value = 0)
-        {
-            int result = default_value;
-            try
-            {
-                bool key_exist = false;
-                for (int i = 0; i < Data.Count; i++)
-                {
-                    if (Data[i][0].Contains(section))
-                    {
-                        var sections = Data[i];
-                        foreach (var keys in sections)
-                        {
-                            if (keys.Contains(key))
-                            {
-                                key_exist = true;
-                                var parts = keys.Split('=');
-                                parts[0] = parts[0].Trim();
-                                parts[1] = parts[1].Trim();
-                                result = Convert.ToInt32(parts[1]);
-                                break;
-                            }
-                        }
-                        if (!key_exist)
-                            AddKeyInSection(section, key, default_value);
-                    }
-                }
-                return result;
-            }
-            catch { return default_value; }
-        }
-
-        /// <summary>This is a method for reading a numeric floating point value from an INI file</summary>
-        /// <param name="section">The section from which reading will be performed.</param>
-        /// <param name="key">The key by which the reading will be performed.</param>
-        /// <param name="default_value">The default value that will be returned in case of a read error.</param>
-        /// <returns>Floating point numeric value</returns>
-        public float GetSingle(string section, string key, float default_value = 0)
-        {
-            float result = default_value;
-            try
-            {
-                bool key_exist = false;
-                for (int i = 0; i < Data.Count; i++)
-                {
-                    if (Data[i][0].Contains(section))
-                    {
-                        var sections = Data[i];
-                        foreach (var keys in sections)
-                        {
-                            if (keys.Contains(key))
-                            {
-                                key_exist = true;
-                                var parts = keys.Split('=');
-                                parts[0] = parts[0].Trim();
-                                parts[1] = parts[1].Trim();
-                                result = Convert.ToSingle(parts[1]);
-                                break;
-                            }
-                        }
-                        if (!key_exist)
-                            AddKeyInSection(section, key, default_value);
-                    }
-                }
-                return result;
-            }
-            catch { return default_value; }
-        }
-
-        /// <summary>This is a method for reading a high precision floating point numeric value from an INI file</summary>
-        /// <param name="section">The section from which reading will be performed.</param>
-        /// <param name="key">The key by which the reading will be performed.</param>
-        /// <param name="default_value">The default value that will be returned in case of a read error.</param>
-        /// <returns>High precision floating point numeric value</returns>
-        public double GetDouble(string section, string key, double default_value = 0)
-        {
-            double result = default_value;
-            try
-            {
-                bool key_exist = false;
-                for (int i = 0; i < Data.Count; i++)
-                {
-                    if (Data[i][0].Contains(section))
-                    {
-                        var sections = Data[i];
-                        foreach (var keys in sections)
-                        {
-                            if (keys.Contains(key))
-                            {
-                                key_exist = true;
-                                var parts = keys.Split('=');
-                                parts[0] = parts[0].Trim();
-                                parts[1] = parts[1].Trim();
-                                result = Convert.ToDouble(parts[1]);
-                                break;
-                            }
-                        }
-                        if (!key_exist)
-                            AddKeyInSection(section, key, default_value);
-                    }
-                }
-                return result;
-            }
-            catch { return result; }
-        }
-
-        /// <summary>This is a method for reading a line from an INI file</summary>
-        /// <param name="section">The section from which reading will be performed.</param>
-        /// <param name="key">The key by which the reading will be performed.</param>
-        /// <param name="default_value">The default value that will be returned in case of a read error.</param>
-        /// <returns>
-        /// Line
-        /// </returns>
-        public string GetString(string section, string key, string default_value = "")
-        {
-            string result = default_value;
-            try
-            {
-                bool key_exist = false;
-                for (int i = 0; i < Data.Count; i++)
-                {
-                    if (Data[i][0].Contains(section))
-                    {
-                        var sections = Data[i];
-                        foreach (var keys in sections)
-                        {
-                            if (keys.Contains(key))
-                            {
-                                key_exist = true;
-                                var parts = keys.Split('=');
-                                parts[0] = parts[0].Trim();
-                                parts[1] = parts[1].Trim();
-                                result = parts[1];
-                                break;
-                            }
-                        }
-                        if (!key_exist)
-                            AddKeyInSection(section, key, default_value);
-                    }
-                }
-                return result;
-            }
-            catch { return default_value; }
-        }
-
-        /// <summary>
-        /// Writes a string to the specified secret in the INI file.
-        /// </summary>
-        /// <param name="section">The section to which the recording will be made.</param>
-        /// <param name="key">The key by which the recording will be made.</param>
-        /// <param name="value">The value that should be written to the file.</param>
-        public void SetKey<T>(string section, string key, T value)
-        {
-            if (!SectionExist(section)) AddSection(section);
-            if (!KeyExist(section, key))
-            {
-                AddKeyInSection(section, key, value);
-                return;
-            }
-            var string_value = value.ToString();
-            bool key_exist = false;
-            var parts = new string[2];
-            for (int i = 0; i < Data.Count; i++)
-            {
-                if (Data[i][0].Contains(section))
-                {
-                    var sections = Data[i];
-                    for (int j = 0; j < sections.Length; j++)
-                    {
-                        if (sections[j].Contains(key))
-                        {
-                            key_exist = true;
-                            parts = sections[j].Split('=');
-                            parts[0] = parts[0].Trim();
-                            parts[1] = string_value;
-                            sections[j] = parts[0] + " = " + parts[1];
-                            break;
-                        }
-                    }
-                    if (!key_exist)
-                        sections.Append(parts[0] + " = " + parts[1]);
-                    Data[i] = sections;
-                }
-            }
-            SaveFile();
-        }
-
-        /// <summary>
-        /// Writes a string to the specified secret in the INI file.
-        /// </summary>
-        /// <param name="section">The section where the deletion will be performed.</param>
-        /// <param name="key">The key that will be deleted.</param>
-        public void RemoveKey(string section, string key)
-        {
-            if (!SectionExist(section)) return;
-            if (!KeyExist(section, key)) return;
-            bool removed = false;
-            for (int i = 0; i < Data.Count; i++)
-            {
-                if (Data[i][0].Contains(section))
-                {
-                    var sections = new List<string>(Data[i]);
-                    for (int j = 0; j < sections.Count; j++)
-                    {
-                        if (sections[j].Contains(key))
-                        {
-                            removed = true;
-                            sections.RemoveAt(j);
-                            break;
-                        }
-                    }
-                    if (removed)
-                    {
-                        Data[i] = sections.ToArray();
-                        break;
-                    }
-                }
-            }
-            SaveFile();
-        }
-
-        public void RemoveSection(string section)
-        {
-            if (!SectionExist(section)) return;
-            for (int i = 0; i < Data.Count; i++)
-            {
-                if (Data[i][0].Contains(section))
-                {
-                    Data.RemoveAt(i);
-                    break;
-                }
-            }
-            SaveFile();
+            byte[] seedBytes = Encoding.UTF8.GetBytes(fullSeed);
+            byte[] hash = sha256.ComputeHash(seedBytes);
+            StringBuilder password = new StringBuilder(length);
+            var rnd = new Random(BitConverter.ToInt32(hash, 0) ^ BitConverter.ToInt32(hash, 4));
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
+            for (int i = 0; i < length; i++)
+                password.Append(chars[rnd.Next(chars.Length)]);
+            return password.ToString();
         }
     }
+
+    private Dictionary<string, Dictionary<string, string>> GetData()
+    {
+        var data = new Dictionary<string, Dictionary<string, string>>();
+        string directory = Path.GetDirectoryName(FilePath);
+        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
+        if (!File.Exists(FilePath))
+        {
+            using var stream = File.Create(FilePath);
+            return data;
+        }
+        string currentSection = null;
+        var lines = ReadFile();
+        if (lines == null) return data;
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (string.IsNullOrWhiteSpace(trimmed)) continue;
+            if (trimmed.StartsWith(';')) continue;
+            if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+            {
+                currentSection = trimmed.Trim('[', ']');
+                if (!data.ContainsKey(currentSection)) data[currentSection] = new Dictionary<string, string>();
+            }
+            else if (currentSection != null && TryMatchKey(trimmed, out string key, out string value))
+                data[currentSection][key] = value;
+        }
+        return data;
+    }
+
+    private string[] ReadFile()
+    {
+        if (!File.Exists(FilePath)) return null;
+        try
+        {
+            byte[] fileBytes = File.ReadAllBytes(FilePath);
+            if (fileBytes.Length < 24) return null;
+            string content;
+            if (!AutoEncryption)
+            {
+                if (!ValidateChecksum(fileBytes)) return null;
+                content = Encoding.UTF8.GetString(fileBytes, 0, fileBytes.Length - 8);
+                return content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
+            }
+            if (!ValidateChecksum(fileBytes)) return null;
+            byte[] iv = new byte[16];
+            Array.Copy(fileBytes, 0, iv, 0, 16);
+            int encryptedLength = fileBytes.Length - 16 - 8;
+            byte[] encryptedContent = new byte[encryptedLength];
+            Array.Copy(fileBytes, 16, encryptedContent, 0, encryptedLength);
+            byte[] key = SHA256.HashData(Encoding.UTF8.GetBytes(EncryptionPassword))[..32];
+            using var aes = Aes.Create();
+            aes.Key = key;
+            aes.IV = iv;
+            using var decryptor = aes.CreateDecryptor();
+            using var ms = new MemoryStream(encryptedContent);
+            using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
+            using var sr = new StreamReader(cs, Encoding.UTF8);
+            content = sr.ReadToEnd();
+            return content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
+        }
+        catch { return null; }
+    }
+
+    public void SaveFile()
+    {
+        var content = new List<string>();
+        lock (Lock)
+        {
+            foreach (var section in Data)
+            {
+                content.Add($"[{section.Key}]");
+                foreach (var kvp in section.Value)
+                    content.Add($"{kvp.Key} = {kvp.Value}");
+                content.Add("");
+            }
+        }
+        string fullText = string.Join(Environment.NewLine, content);
+        byte[] plaintextBytes = Encoding.UTF8.GetBytes(fullText);
+        byte[] dataWithChecksum;
+        if (!AutoEncryption)
+        {
+            ClearFile();
+            dataWithChecksum = AddChecksum(plaintextBytes);
+            File.WriteAllBytes(FilePath, dataWithChecksum);
+            return;
+        }
+        var key = SHA256.HashData(Encoding.UTF8.GetBytes(EncryptionPassword))[..32];
+        using var aes = Aes.Create();
+        aes.Key = key;
+        aes.GenerateIV();
+        using var encryptor = aes.CreateEncryptor();
+        using var ms = new MemoryStream();
+        ms.Write(aes.IV, 0, aes.IV.Length);
+        using var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write);
+        cs.Write(plaintextBytes, 0, plaintextBytes.Length);
+        cs.FlushFinalBlock();
+        byte[] encryptedData = ms.ToArray();
+        dataWithChecksum = AddChecksum(encryptedData);
+        File.WriteAllBytes(FilePath, dataWithChecksum);
+    }
+
+    private static bool ValidateChecksum(byte[] data)
+    {
+        if (data.Length < 8) return false;
+
+        byte[] dataWithoutChecksum = data[..^8];
+        byte[] checksumWithPlaceholder = new byte[data.Length];
+        Array.Copy(dataWithoutChecksum, 0, checksumWithPlaceholder, 0, dataWithoutChecksum.Length);
+        Array.Copy(new byte[8], 0, checksumWithPlaceholder, dataWithoutChecksum.Length, 8); // Zero placeholder
+
+        byte[] calculatedChecksum = SHA256.HashData(checksumWithPlaceholder)[..8];
+        byte[] storedChecksum = data[^8..];
+
+        return storedChecksum.SequenceEqual(calculatedChecksum);
+    }
+
+    private static byte[] AddChecksum(byte[] data)
+    {
+        byte[] checksumWithPlaceholder = new byte[data.Length + 8];
+        Array.Copy(data, 0, checksumWithPlaceholder, 0, data.Length);
+        Array.Copy(new byte[8], 0, checksumWithPlaceholder, data.Length, 8); // Zero placeholder
+
+        byte[] checksum = SHA256.HashData(checksumWithPlaceholder)[..8];
+        byte[] result = new byte[data.Length + 8];
+        Array.Copy(data, 0, result, 0, data.Length);
+        Array.Copy(checksum, 0, result, data.Length, 8);
+        return result;
+    }
+
+
+    #endregion
+
+    #region Raw Data
+
+    private string GetStringRaw(string section, string keyName)
+    {
+        lock (Lock)
+            return Data.TryGetValue(section, out var sec) && sec.TryGetValue(keyName, out var val) ? val : null;
+    }
+
+    private static T TryParseValue<T>(string value, T defaultValue)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return defaultValue;
+        if (typeof(T) == typeof(bool))
+            return bool.TryParse(value, out bool parsed) ? (T)(object)parsed : defaultValue;
+        try
+        {
+            if (value == null || string.IsNullOrWhiteSpace(value))
+                return defaultValue;
+            object parsed = Convert.ChangeType(value.Trim(), typeof(T));
+            return (T)parsed;
+        }
+        catch { return defaultValue; }
+    }
+
+    private static bool TryMatchKey(string line) => TryMatchKey(line, out _, out _);
+
+    private static bool TryMatchKey(string line, out string key, out string value)
+    {
+        key = null;
+        value = null;
+        int eqIndex = line.IndexOf('=');
+        if (eqIndex == -1) return false;
+        key = line.Substring(0, eqIndex).Trim();
+        value = line.Substring(eqIndex + 1).Trim();
+        return true;
+    }
+
+    #endregion
+
+    #region User Methods
+
+    /// <summary>
+    /// Checks if a section exists in the specified path.
+    /// </summary>
+    /// <param name="section">The section to search for.</param>
+    /// <returns><b>True</b> if the section exists, <b>false</b> otherwise.</returns>
+    public bool SectionExists(string section) { lock (Lock) return Data.ContainsKey(section); }
+
+    /// <summary>
+    /// Checks if a key exists within a given section in the specified path.
+    /// </summary>
+    /// <param name="section">The section to search for.</param>
+    /// <param name="key">The key to search for within the section.</param>
+    /// <returns><b>True</b> if the key exists within the section, <b>false</b> otherwise.</returns>
+    public bool KeyExists(string sectionName, string keyName)
+    {
+        if (!SectionExists(sectionName)) return false;
+        lock (Lock) return Data[sectionName].ContainsKey(keyName);
+    }
+
+    /// <summary>This is a method to clear the INI file.</summary>
+    public void ClearFile() => File.WriteAllText(FilePath, string.Empty);
+
+    /// <summary>This is a method for adding a new section to the end of the file</summary>
+    /// <param name="section">The section to write to.</param>
+    public void AddSection(string section)
+    {
+        if (SectionExists(section)) return;
+        lock (Lock) Data[section] = new Dictionary<string, string>();
+        if (AutoSave) SaveFile();
+    }
+
+    /// <summary>This is a method of adding a new key to the end of a section</summary>
+    /// <param name="section">The section to which the recording will be made.</param>
+    /// <param name="key">The key that will be created.</param>
+    /// <param name="value">The value that will be written to the key.</param>
+    public void AddKeyInSection<T>(string section, string key, T value)
+    {
+        if (!SectionExists(section)) AddSection(section);
+        if (KeyExists(section, key)) return;
+        lock (Lock) Data[section][key] = value.ToString().Trim();
+        if (AutoSave) SaveFile();
+    }
+
+    /// <summary>
+    /// Reads a value of any type from an INI file. Automatically detects the type and parses the value.
+    /// </summary>
+    /// <typeparam name="T">Value type (bool, int, float, double, string, etc.)</typeparam>
+    /// <param name="section">Reading section</param>
+    /// <param name="key">Key for reading</param>
+    /// <param name="defaultValue">Default value on read error</param>
+    /// <returns>Value of the required type or defaultValue on error</returns>
+    public T GetValue<T>(string section, string key, T defaultValue = default(T))
+    {
+        try
+        {
+            string stringValue = GetStringRaw(section, key);
+            if (stringValue == null)
+            {
+                if (AutoAdd) AddKeyInSection(section, key, defaultValue?.ToString() ?? "");
+                return defaultValue;
+            }
+            return TryParseValue<T>(stringValue, defaultValue);
+        }
+        catch { return defaultValue; }
+    }
+
+    /// <summary>
+    /// Writes a string to the specified secret in the INI file.
+    /// </summary>
+    /// <param name="section">The section to which the recording will be made.</param>
+    /// <param name="key">The key by which the recording will be made.</param>
+    /// <param name="value">The value that should be written to the file.</param>
+    public void SetKey<T>(string section, string key, T value)
+    {
+        if (!SectionExists(section)) AddSection(section);
+        if (!KeyExists(section, key))
+        {
+            AddKeyInSection(section, key, value);
+            return;
+        }
+        lock (Lock) Data[section][key] = value.ToString().Trim();
+        if (AutoSave) SaveFile();
+    }
+
+    /// <summary>
+    /// Removes the specified key from the INI file section.
+    /// </summary>
+    /// <param name="section">The section in which the deletion is performed.</param>
+    /// <param name="key">The key to be deleted.</param>
+    public void RemoveKey(string section, string key)
+    {
+        if (!KeyExists(section, key)) return;
+        lock (Lock) Data[section].Remove(key);
+        if (AutoSave) SaveFile();
+    }
+
+    /// <summary>
+    /// Removes the specified section from the INI file.
+    /// </summary>
+    /// <param name="section">The section to be deleted.</param>
+    public void RemoveSection(string section)
+    {
+        if (!SectionExists(section)) return;
+        lock (Lock) Data.Remove(section);
+        if (AutoSave) SaveFile();
+    }
+
+    #endregion
 }
