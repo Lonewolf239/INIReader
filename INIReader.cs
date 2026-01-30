@@ -5,7 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace IniReader;
+namespace NeoIni;
 
 ///<summary>
 /// This is a class for working with INI files
@@ -18,7 +18,7 @@ namespace IniReader;
 /// <br></br>
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
-public class INIReader
+public class NeoIni
 {
     private readonly Dictionary<string, Dictionary<string, string>> Data;
     private readonly string FilePath;
@@ -26,9 +26,9 @@ public class INIReader
     public bool AutoAdd = true;
     private bool AutoEncryption = false;
     private string EncryptionPassword;
-    private Lock Lock = new();
+    private readonly object Lock = new();
 
-    public INIReader(string path, bool autoEncryption = false)
+    public NeoIni(string path, bool autoEncryption = false)
     {
         FilePath = path;
         if (autoEncryption)

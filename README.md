@@ -1,6 +1,15 @@
-# INIReader
+# NeoIni
 
-INIReader is a C# class for working with INI files. It provides secure, thread-safe methods for creating, reading, and modifying INI files with built-in checksum validation and optional AES encryption.
+NeoIni is a C# class for working with INI files. It provides secure, thread-safe methods for creating, reading, and modifying INI files with built-in checksum validation and optional AES encryption.
+
+## Installation
+
+```bash
+dotnet add package NeoIni
+```
+
+**Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)  
+**Version:** `1.5.1` | **.NET 9+**
 
 ## Features
 
@@ -18,19 +27,14 @@ INIReader is a C# class for working with INI files. It provides secure, thread-s
 
 ## Usage
 
-### Creating an INIReader Instance
+### Creating an NeoIni Instance
 
 ```cs
-INIReader reader = new INIReader("config.ini");                    // Standard usage
-INIReader encryptedReader = new INIReader("config.ini", true);     // With auto-encryption
+NeoIni reader = new("config.ini");                   // Standard usage
+NeoIni encryptedReader = new("config.ini", true);    // With auto-encryption
 ```
 
-- `path`: Path to the INI file (directory auto-created if needed)
-- `autoEncryption`: Enable automatic AES encryption (uses machine/user-specific password)
-
 ### Reading Values
-
-Use the generic `GetValue<T>` method for automatic type parsing:
 
 ```cs
 string text = reader.GetValue<string>("Section1", "Key1", "default");
@@ -38,9 +42,6 @@ int number = reader.GetValue<int>("Section1", "Number", 0);
 bool flag = reader.GetValue<bool>("Section1", "Enabled", false);
 double value = reader.GetValue<double>("Section1", "Value", 0.0);
 ```
-
-- Auto-creates missing sections/keys if `AutoAdd = true` (default)
-- Returns `defaultValue` on parse errors or missing keys
 
 ### Writing Values
 
@@ -50,76 +51,37 @@ reader.SetKey("Section1", "Number", 42);
 reader.SetKey("Section1", "Enabled", true);
 ```
 
-- Auto-creates missing sections if needed
-- Supports any type (converted to string automatically)
-- Auto-saves if `AutoSave = true` (default)
-
-### Configuration Options
-
-```cs
-reader.AutoSave = false;  // Disable auto-save after changes
-reader.AutoAdd = false;   // Disable auto-creation of missing keys/sections
-reader.SaveFile();        // Manual save
-```
-
-### Section and Key Management
-
-```cs
-reader.AddSection("NewSection");           // Add empty section
-reader.RemoveSection("Section1");          // Remove section
-reader.RemoveKey("Section1", "Key1");      // Remove specific key
-bool exists = reader.SectionExists("Section1");
-bool keyExists = reader.KeyExists("Section1", "Key1");
-```
-
-## Security Features
-
-- **Checksum Validation**: Every file includes SHA256 checksum for integrity verification
-- **AES-256 Encryption**: Optional encryption with IV and key derivation from user/machine info
-- **Thread Safety**: All operations protected by internal lock
-
 ## Example
 
 ```cs
-INIReader reader = new INIReader("config.ini");
+NeoIni reader = new("config.ini");
 
-// Write data
 reader.SetKey("Database", "Host", "localhost");
 reader.SetKey("Database", "Port", 5432);
 reader.SetKey("Settings", "AutoSave", true);
 
-// Read with default values
-string host = reader.GetValue<string>("Database", "Host", "127.0.0.1");
-int port = reader.GetValue<int>("Database", "Port", 3306);
+string host = reader.GetValue("Database", "Host", "127.0.0.1");
+int port = reader.GetValue("Database", "Port", 3306);
 
-// Check existence
-if (reader.SectionExists("User"))
-{
-    string name = reader.GetValue<string>("User", "Name", "Anonymous");
-    Console.WriteLine($"User: {name}");
-}
-
-// Manual save (optional if AutoSave is true)
-reader.SaveFile();
+Console.WriteLine($"DB: {host}:{port}");
 ```
 
-## File Format
+## Security Features
 
-INIReader uses standard INI format with enhanced security:
+- **Checksum**: SHA256 validation на каждый файл
+- **AES-256**: Опциональное шифрование с IV
+- **Thread-safe**: Все операции под `lock`
 
+## Section/Key Management
+
+```cs
+reader.AddSection("NewSection");
+reader.RemoveKey("Section1", "Key1");
+bool exists = reader.SectionExists("Section1");
 ```
-[Section1]
-Key1 = Value1
-Key2 = 123
-
-[Section2]
-Enabled = true
-```
-
-Files are stored with binary header (checksum + optional encryption).
 
 ## Developer
 
-Developed by [Lonewolf239](https://github.com/Lonewolf239).
+[Lonewolf239](https://github.com/Lonewolf239)
 
 ## Version 1.5.1
