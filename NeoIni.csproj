@@ -2,11 +2,13 @@
 	<PropertyGroup>
 		<TargetFrameworks>net9.0</TargetFrameworks>
 		<PackageId>NeoIni</PackageId>
-		<Version>1.5.1</Version>
+		<Version>1.5.2</Version>
 		<Authors>Lonewolf239</Authors>
 		<Description>Modern INI reader/writer for .NET 9. AES encryption, thread-safe.</Description>
 		<PackageTags>ini;config;encryption</PackageTags>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/Lonewolf239/NeoIni</RepositoryUrl>
 	</PropertyGroup>
 </Project>

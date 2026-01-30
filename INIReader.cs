@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace NeoIni;
 
@@ -14,7 +15,7 @@ namespace NeoIni;
 /// <br></br>
 /// <b>Target Framework: .NET 9+</b>
 /// <br></br>
-/// <b>Version: 1.5.1</b>
+/// <b>Version: 1.5.2</b>
 /// <br></br>
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
@@ -26,6 +27,7 @@ public class NeoIni
     public bool AutoAdd = true;
     private bool AutoEncryption = false;
     private string EncryptionPassword;
+    private readonly byte[] EncryptionKey;
     private readonly object Lock = new();
 
     public NeoIni(string path, bool autoEncryption = false)
@@ -34,6 +36,7 @@ public class NeoIni
         if (autoEncryption)
         {
             EncryptionPassword = GeneratePasswordFromUserId();
+            EncryptionKey = SHA256.HashData(Encoding.UTF8.GetBytes(EncryptionPassword))[..32];
             AutoEncryption = true;
         }
         Data = GetData();
@@ -106,9 +109,8 @@ public class NeoIni
             int encryptedLength = fileBytes.Length - 16 - 8;
             byte[] encryptedContent = new byte[encryptedLength];
             Array.Copy(fileBytes, 16, encryptedContent, 0, encryptedLength);
-            byte[] key = SHA256.HashData(Encoding.UTF8.GetBytes(EncryptionPassword))[..32];
             using var aes = Aes.Create();
-            aes.Key = key;
+            aes.Key = EncryptionKey;
             aes.IV = iv;
             using var decryptor = aes.CreateDecryptor();
             using var ms = new MemoryStream(encryptedContent);
@@ -142,9 +144,8 @@ public class NeoIni
             File.WriteAllBytes(FilePath, dataWithChecksum);
             return;
         }
-        var key = SHA256.HashData(Encoding.UTF8.GetBytes(EncryptionPassword))[..32];
         using var aes = Aes.Create();
-        aes.Key = key;
+        aes.Key = EncryptionKey;
         aes.GenerateIV();
         using var encryptor = aes.CreateEncryptor();
         using var ms = new MemoryStream();
@@ -156,6 +157,7 @@ public class NeoIni
         dataWithChecksum = AddChecksum(encryptedData);
         File.WriteAllBytes(FilePath, dataWithChecksum);
     }
+    public async Task SaveFileAsync() => await Task.Run(SaveFile);
 
     private static bool ValidateChecksum(byte[] data)
     {
@@ -225,6 +227,8 @@ public class NeoIni
     /// <param name="section">The section to search for.</param>
     /// <returns><b>True</b> if the section exists, <b>false</b> otherwise.</returns>
     public bool SectionExists(string section) { lock (Lock) return Data.ContainsKey(section); }
+    public async Task<bool> SectionExistsAsync(string section) =>
+        await Task.Run(() => SectionExists(section));
 
     /// <summary>
     /// Checks if a key exists within a given section in the specified path.
@@ -232,11 +236,13 @@ public class NeoIni
     /// <param name="section">The section to search for.</param>
     /// <param name="key">The key to search for within the section.</param>
     /// <returns><b>True</b> if the key exists within the section, <b>false</b> otherwise.</returns>
-    public bool KeyExists(string sectionName, string keyName)
+    public bool KeyExists(string section, string key)
     {
-        if (!SectionExists(sectionName)) return false;
-        lock (Lock) return Data[sectionName].ContainsKey(keyName);
+        if (!SectionExists(section)) return false;
+        lock (Lock) return Data[section].ContainsKey(key);
     }
+    public async Task<bool> KeyExistsAsync(string section, string key) =>
+        await Task.Run(() => KeyExists(section, key));
 
     /// <summary>This is a method for adding a new section to the end of the file</summary>
     /// <param name="section">The section to write to.</param>
@@ -246,6 +252,8 @@ public class NeoIni
         lock (Lock) Data[section] = new Dictionary<string, string>();
         if (AutoSave) SaveFile();
     }
+    public async Task AddSectionAsync(string section) =>
+        await Task.Run(() => AddSection(section));
 
     /// <summary>This is a method of adding a new key to the end of a section</summary>
     /// <param name="section">The section to which the recording will be made.</param>
@@ -258,6 +266,8 @@ public class NeoIni
         lock (Lock) Data[section][key] = value.ToString().Trim();
         if (AutoSave) SaveFile();
     }
+    public async Task AddKeyInSectionAsync<T>(string section, string key, T value) =>
+        await Task.Run(() => AddKeyInSection<T>(section, key, value));
 
     /// <summary>
     /// Reads a value of any type from an INI file. Automatically detects the type and parses the value.
@@ -281,6 +291,8 @@ public class NeoIni
         }
         catch { return defaultValue; }
     }
+    public async Task<T> GetValueAsync<T>(string section, string key, T defaultValue = default(T)) =>
+        await Task.Run(() => GetValue<T>(section, key, defaultValue));
 
     /// <summary>
     /// Writes a string to the specified secret in the INI file.
@@ -294,6 +306,8 @@ public class NeoIni
         lock (Lock) Data[section][key] = value.ToString().Trim();
         if (AutoSave) SaveFile();
     }
+    public async Task SetKeyAsync<T>(string section, string key, T value) =>
+        await Task.Run(() => SetKey<T>(section, key, value));
 
     /// <summary>
     /// Removes the specified key from the INI file section.
@@ -306,6 +320,8 @@ public class NeoIni
         lock (Lock) Data[section].Remove(key);
         if (AutoSave) SaveFile();
     }
+    public async Task RemoveKeyAsync(string section, string key) =>
+        await Task.Run(() => RemoveKey(section, key));
 
     /// <summary>
     /// Removes the specified section from the INI file.
@@ -317,6 +333,8 @@ public class NeoIni
         lock (Lock) Data.Remove(section);
         if (AutoSave) SaveFile();
     }
+    public async Task RemoveSectionAsync(string section) =>
+        await Task.Run(() => RemoveSection(section));
 
     #endregion
 }

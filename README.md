@@ -9,7 +9,7 @@ dotnet add package NeoIni
 ```
 
 **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)  
-**Version:** `1.5.1` | **.NET 9+**
+**Version:** `1.5.2` | **.NET 9+**
 
 ## Features
 
@@ -83,5 +83,3 @@ bool exists = reader.SectionExists("Section1");
 ## Developer
 
 [Lonewolf239](https://github.com/Lonewolf239)
-
-## Version 1.5.1
