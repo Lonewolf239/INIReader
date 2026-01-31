@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>net8.0</TargetFrameworks>
+		<TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
 		<PackageId>NeoIni</PackageId>
-		<Version>1.5.4.1</Version>
+		<Version>1.5.4.2</Version>
 		<Authors>Lonewolf239</Authors>
 		<Description>Modern INI reader/writer for .NET 8+. AES encryption, thread-safe.</Description>
-		<PackageTags>ini;config;encryption;ini-parser;configuration;secure-config;aes-ini;.NET9</PackageTags>
+		<PackageTags>ini;config;encryption;ini-parser;configuration;secure-config;aes-ini;.NET8;.NET9;.NET10</PackageTags>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryType>git</RepositoryType>

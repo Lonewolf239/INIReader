@@ -10,13 +10,13 @@ namespace NeoIni;
 ///
 /// Developer: <a href="https://github.com/Lonewolf239">Lonewolf239</a>
 ///
-/// <b>Target Framework: .NET 9+</b>
+/// <b>Target Framework: .NET 8+</b>
 ///
-/// <b>Version: 1.5.4.1</b>
+/// <b>Version: 1.5.4.2</b>
 ///
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
-public class NeoIniReader
+public class NeoIniReader : IDisposable
 {
     private Dictionary<string, Dictionary<string, string>> Data;
     private readonly string FilePath;
@@ -30,13 +30,13 @@ public class NeoIniReader
     /// <summary>
     /// Determines whether automatic saves occur at regular intervals when <see cref="AutoSave"/> is enabled.
     /// When <c>false</c>, saves happen after every modification instead of waiting for the interval.
-    /// Default value is <c>true</c>.
+    /// Default value is <c>false</c>.
     /// </summary>
-    public bool UseAutoSaveInterval = true;
+    public bool UseAutoSaveInterval = false;
 
     /// <summary>
     /// Interval (in operations) between automatic saves when <see cref="AutoSave"/> is enabled.
-    /// Default value is 5.
+    /// Default value is 3.
     /// </summary>
     public int AutoSaveInterval
     {
@@ -48,7 +48,7 @@ public class NeoIniReader
             _AutoSaveInterval = value;
         }
     }
-    private int _AutoSaveInterval = 5;
+    private int _AutoSaveInterval = 3;
     private int SaveIterationCounter = 0;
 
     /// <summary>
@@ -111,6 +111,15 @@ public class NeoIniReader
         EncryptionKey = NeoIniEncryptionProvider.GetEncryptionKey(encryptionPassword);
         AutoEncryption = true;
         Data = FileProvider.GetData(UseChecksum);
+    }
+
+    /// <summary>
+    /// Releases managed resources and saves changes to the file.
+    /// </summary>
+    public void Dispose()
+    {
+        SaveFile();
+        Data?.Clear();
     }
 
     /// <summary>

@@ -9,7 +9,7 @@ dotnet add package NeoIni
 ```
 
 **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)  
-**Version:** `1.5.4.1` | **.NET 8+**
+**Version:** `1.5.4.2` | **.NET 8+**
 
 ## Features
 
@@ -66,7 +66,7 @@ reader.SetKey("Section1", "Enabled", true);
 ## Example
 
 ```cs
-NeoIniReader reader = new("config.ini");
+using NeoIniReader reader = new("config.ini");
 
 reader.SetKey("Database", "Host", "localhost");
 reader.SetKey("Database", "Port", 5432);
