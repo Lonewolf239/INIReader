@@ -60,17 +60,17 @@ reader.SetKey("Database", "Host", "localhost");
 reader.SetKey("Database", "Port", 5432);
 reader.SetKey("Settings", "AutoSave", true);
 
-string host = reader.GetValue("Database", "Host", "127.0.0.1");
-int port = reader.GetValue("Database", "Port", 3306);
+string host = reader.GetValue<string>("Database", "Host", "127.0.0.1");
+int port = reader.GetValue<string>("Database", "Port", 3306);
 
 Console.WriteLine($"DB: {host}:{port}");
 ```
 
 ## Security Features
 
-- **Checksum**: SHA256 validation на каждый файл
-- **AES-256**: Опциональное шифрование с IV
-- **Thread-safe**: Все операции под `lock`
+- **Checksum**: SHA256 validation for each file
+- **AES-256**: Optional encryption with IV
+- **Thread-safe**: All operations are under lock.
 
 ## Section/Key Management
 
