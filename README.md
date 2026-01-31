@@ -68,9 +68,9 @@ Console.WriteLine($"DB: {host}:{port}");
 
 ## Security Features
 
-- **Checksum**: SHA256 validation на каждый файл
-- **AES-256**: Опциональное шифрование с IV
-- **Thread-safe**: Все операции под `lock`
+- **Checksum**: SHA256 validation for each file
+- **AES-256**: Optional encryption with IV
+- **Thread-safe**: All operations are under `lock`.
 
 ## Section/Key Management
 
