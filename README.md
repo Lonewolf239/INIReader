@@ -9,25 +9,27 @@ dotnet add package NeoIni
 ```
 
 **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)  
-**Version:** `1.5.2` | **.NET 9+**
+**Version:** `1.5.3` | **.NET 8+**
 
 ## Features
 
 - Read and parse typed values (bool, int, float, double, string, etc.) from INI files
 - Automatic type detection and parsing with fallback to default values
 - Thread-safe operations using locks
-- Automatic file saving and section/key creation (configurable)
-- Built-in checksum validation for data integrity
+- Automatic file saving and section/key creation (configurable via `AutoSave` and `AutoAdd`)
+- Built-in checksum validation (SHA256) for data integrity
 - Optional AES-256 encryption with user-specific password generation
 - Support for standard INI format with sections and key-value pairs
+- Full async method support for all operations
+- Automatic directory creation and file initialization
 
 ## Target Framework
 
-.NET 9+
+.NET 8+
 
 ## Usage
 
-### Creating an NeoIni Instance
+### Creating a NeoIni Instance
 
 ```cs
 NeoIni reader = new("config.ini");                   // Standard usage
@@ -51,6 +53,11 @@ reader.SetKey("Section1", "Number", 42);
 reader.SetKey("Section1", "Enabled", true);
 ```
 
+## Configuration Options
+
+- `AutoSave = true`: Automatically saves changes to disk after modifications
+- `AutoAdd = true`: Creates missing sections/keys with default values on read
+
 ## Example
 
 ```cs
@@ -68,17 +75,54 @@ Console.WriteLine($"DB: {host}:{port}");
 
 ## Security Features
 
-- **Checksum**: SHA256 validation for each file
-- **AES-256**: Optional encryption with IV
-- **Thread-safe**: All operations are under `lock`.
+- **Checksum**: SHA256 validation detects tampering or corruption
+- **AES-256**: User-environment derived encryption key with IV
+- **Thread-safe**: All operations protected by `lock`
+- Password generated from `Environment.UserName`, `MachineName`, `UserDomainName`
 
 ## Section/Key Management
 
 ```cs
+bool exists = reader.SectionExists("Section1");
+bool keyExists = reader.KeyExists("Section1", "Key1");
+
 reader.AddSection("NewSection");
 reader.RemoveKey("Section1", "Key1");
-bool exists = reader.SectionExists("Section1");
+reader.RemoveSection("Section1");
+
+string[] sections = reader.GetAllSections();
+string[] keys = reader.GetAllKeys("Section1");
 ```
+
+## File Operations
+
+```cs
+reader.SaveFile();                    // Manual save
+await reader.SaveFileAsync();         // Async save
+
+reader.ReloadFromFile();              // Reload from disk
+await reader.ReloadFromFileAsync();   // Async reload from disk
+
+reader.DeleteFile();                  // Delete file only
+reader.DeleteFileWithData();          // Delete file + clear data
+```
+
+## API Reference
+
+| Method | Description | Async Version |
+|--------|-------------|---------------|
+| `GetValue<T>` | Read typed value with default fallback | `GetValueAsync<T>` |
+| `SetKey<T>` | Set/create key-value | `SetKeyAsync<T>` |
+| `AddSection` | Create section if missing | `AddSectionAsync` |
+| `AddKeyInSection<T>` | Add unique key-value | `AddKeyInSectionAsync<T>` |
+| `RemoveKey` | Delete specific key | `RemoveKeyAsync` |
+| `RemoveSection` | Delete entire section | `RemoveSectionAsync` |
+| `GetAllSections` | List all sections | `GetAllSectionsAsync` |
+| `GetAllKeys` | List section keys | `GetAllKeysAsync` |
+
+## Philosophy
+
+**Black Box Design**: Interact only through public API - internals abstracted
 
 ## Developer
 

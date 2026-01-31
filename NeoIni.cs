@@ -8,28 +8,43 @@ using System.Threading.Tasks;
 
 namespace NeoIni;
 
-///<summary>
-/// This is a class for working with INI files
-/// <br></br>
+/// <summary>
+/// A class for working with INI files.
+///
 /// Developer: <a href="https://github.com/Lonewolf239">Lonewolf239</a>
-/// <br></br>
+///
 /// <b>Target Framework: .NET 9+</b>
-/// <br></br>
-/// <b>Version: 1.5.2</b>
-/// <br></br>
+///
+/// <b>Version: 1.5.3</b>
+///
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
 public class NeoIni
 {
-    private readonly Dictionary<string, Dictionary<string, string>> Data;
+    private Dictionary<string, Dictionary<string, string>> Data;
     private readonly string FilePath;
+
+    /// <summary>
+    /// Determines whether changes are automatically written to the disk after every modification.
+	/// Default is <c>true</c>.
+    /// </summary>
     public bool AutoSave = true;
+
+    /// <summary>
+    /// Determines whether missing keys are automatically added to the file with a default value when requested via <see cref="GetValue{T}"/>. 
+	/// Default is <c>true</c>.
+    /// </summary>
     public bool AutoAdd = true;
     private bool AutoEncryption = false;
     private string EncryptionPassword;
     private readonly byte[] EncryptionKey;
     private readonly object Lock = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NeoIni"/> class.
+    /// </summary>
+    /// <param name="path">The absolute or relative path to the INI file.</param>
+    /// <param name="autoEncryption">If set to <c>true</c>, enables automatic encryption of the file content based on the user's environment.</param>
     public NeoIni(string path, bool autoEncryption = false)
     {
         FilePath = path;
@@ -84,7 +99,7 @@ public class NeoIni
                 currentSection = trimmed.Trim('[', ']');
                 if (!data.ContainsKey(currentSection)) data[currentSection] = new Dictionary<string, string>();
             }
-            else if (currentSection != null && TryMatchKey(trimmed, out string key, out string value))
+            else if (currentSection != null && TryMatchKey(trimmed.AsSpan(), out string key, out string value))
                 data[currentSection][key] = value;
         }
         return data;
@@ -122,6 +137,9 @@ public class NeoIni
         catch { return null; }
     }
 
+    /// <summary>
+    /// Saves the current data to an INI file with checksums and encryption applied, if enabled.
+    /// </summary>
     public void SaveFile()
     {
         var content = new List<string>();
@@ -157,6 +175,10 @@ public class NeoIni
         dataWithChecksum = AddChecksum(encryptedData);
         File.WriteAllBytes(FilePath, dataWithChecksum);
     }
+
+    /// <summary>
+    /// Asynchronously saves the current data to the INI file.
+    /// </summary>
     public async Task SaveFileAsync() => await Task.Run(SaveFile);
 
     private static bool ValidateChecksum(byte[] data)
@@ -204,16 +226,16 @@ public class NeoIni
         catch { return defaultValue; }
     }
 
-    private static bool TryMatchKey(string line) => TryMatchKey(line, out _, out _);
-
-    private static bool TryMatchKey(string line, out string key, out string value)
+    private static bool TryMatchKey(ReadOnlySpan<char> line, out string key, out string value)
     {
-        key = null;
-        value = null;
+        key = value = null;
         int eqIndex = line.IndexOf('=');
         if (eqIndex == -1) return false;
-        key = line.Substring(0, eqIndex).Trim();
-        value = line.Substring(eqIndex + 1).Trim();
+        ReadOnlySpan<char> keySpan = line[..eqIndex].Trim();
+        ReadOnlySpan<char> valueSpan = line[(eqIndex + 1)..].Trim();
+        if (keySpan.IsEmpty || valueSpan.IsEmpty) return false;
+        key = keySpan.ToString();
+        value = valueSpan.ToString();
         return true;
     }
 
@@ -222,43 +244,65 @@ public class NeoIni
     #region User Methods
 
     /// <summary>
-    /// Checks if a section exists in the specified path.
+    /// Determines whether a specific section exists in the loaded data.
     /// </summary>
-    /// <param name="section">The section to search for.</param>
-    /// <returns><b>True</b> if the section exists, <b>false</b> otherwise.</returns>
+    /// <param name="section">The name of the section to search for.</param>
+    /// <returns><c>true</c> if the section exists; otherwise, <c>false</c>.</returns>
     public bool SectionExists(string section) { lock (Lock) return Data.ContainsKey(section); }
-    public async Task<bool> SectionExistsAsync(string section) =>
-        await Task.Run(() => SectionExists(section));
 
     /// <summary>
-    /// Checks if a key exists within a given section in the specified path.
+    /// Asynchronously determines whether a specific section exists in the loaded data.
     /// </summary>
-    /// <param name="section">The section to search for.</param>
-    /// <param name="key">The key to search for within the section.</param>
-    /// <returns><b>True</b> if the key exists within the section, <b>false</b> otherwise.</returns>
+    /// <param name="section">The name of the section to search for.</param>
+    /// <returns>A task that represents the asynchronous operation.
+	/// The task result contains <c>true</c> if the section exists; otherwise, <c>false</c>.</returns>
+    public async Task<bool> SectionExistsAsync(string section) => await Task.Run(() => SectionExists(section));
+
+    /// <summary>
+    /// Determines whether a specific key exists within a given section.
+    /// </summary>
+    /// <param name="section">The name of the section to search in.</param>
+    /// <param name="key">The name of the key to search for.</param>
+    /// <returns><c>true</c> if the key exists within the section; otherwise, <c>false</c>.</returns>
     public bool KeyExists(string section, string key)
     {
         if (!SectionExists(section)) return false;
         lock (Lock) return Data[section].ContainsKey(key);
     }
-    public async Task<bool> KeyExistsAsync(string section, string key) =>
-        await Task.Run(() => KeyExists(section, key));
 
-    /// <summary>This is a method for adding a new section to the end of the file</summary>
-    /// <param name="section">The section to write to.</param>
+    /// <summary>
+    /// Asynchronously determines whether a specific key exists within a given section.
+    /// </summary>
+    /// <param name="section">The name of the section to search in.</param>
+    /// <param name="key">The name of the key to search for.</param>
+    /// <returns>A task that represents the asynchronous operation.
+	/// The task result contains <c>true</c> if the key exists; otherwise, <c>false</c>.</returns>
+    public async Task<bool> KeyExistsAsync(string section, string key) => await Task.Run(() => KeyExists(section, key));
+
+    /// <summary>
+    /// Adds a new section to the file if it does not already exist.
+    /// </summary>
+    /// <param name="section">The name of the new section.</param>
     public void AddSection(string section)
     {
         if (SectionExists(section)) return;
         lock (Lock) Data[section] = new Dictionary<string, string>();
         if (AutoSave) SaveFile();
     }
-    public async Task AddSectionAsync(string section) =>
-        await Task.Run(() => AddSection(section));
 
-    /// <summary>This is a method of adding a new key to the end of a section</summary>
-    /// <param name="section">The section to which the recording will be made.</param>
-    /// <param name="key">The key that will be created.</param>
-    /// <param name="value">The value that will be written to the key.</param>
+    /// <summary>
+    /// Asynchronously adds a new section to the file if it does not already exist.
+    /// </summary>
+    /// <param name="section">The name of the new section.</param>
+    public async Task AddSectionAsync(string section) => await Task.Run(() => AddSection(section));
+
+    /// <summary>
+    /// Adds a new key-value pair to a specified section.
+    /// </summary>
+    /// <typeparam name="T">The type of the value being added.</typeparam>
+    /// <param name="section">The name of the target section.</param>
+    /// <param name="key">The name of the key to create.</param>
+    /// <param name="value">The value to assign to the key.</param>
     public void AddKeyInSection<T>(string section, string key, T value)
     {
         if (!SectionExists(section)) AddSection(section);
@@ -266,17 +310,26 @@ public class NeoIni
         lock (Lock) Data[section][key] = value.ToString().Trim();
         if (AutoSave) SaveFile();
     }
+
+    /// <summary>
+    /// Asynchronously adds a new key-value pair to a specified section.
+    /// </summary>
+    /// <typeparam name="T">The type of the value being added.</typeparam>
+    /// <param name="section">The name of the target section.</param>
+    /// <param name="key">The name of the key to create.</param>
+    /// <param name="value">The value to assign to the key.</param>
     public async Task AddKeyInSectionAsync<T>(string section, string key, T value) =>
         await Task.Run(() => AddKeyInSection<T>(section, key, value));
 
     /// <summary>
-    /// Reads a value of any type from an INI file. Automatically detects the type and parses the value.
+    /// Retrieves a value of a specified type from the INI file.
+	/// Automatically parses the string value to the target type.
     /// </summary>
-    /// <typeparam name="T">Value type (bool, int, float, double, string, etc.)</typeparam>
-    /// <param name="section">Reading section</param>
-    /// <param name="key">Key for reading</param>
-    /// <param name="defaultValue">Default value on read error</param>
-    /// <returns>Value of the required type or defaultValue on error</returns>
+    /// <typeparam name="T">The expected type of the value (e.g., bool, int, double, string, etc.).</typeparam>
+    /// <param name="section">The section containing the key.</param>
+    /// <param name="key">The name of the key to retrieve.</param>
+    /// <param name="defaultValue">The value to return if the key or section does not exist, or if parsing fails.</param>
+    /// <returns>The parsed value, or <paramref name="defaultValue"/> if retrieval fails.</returns>
     public T GetValue<T>(string section, string key, T defaultValue = default(T))
     {
         try
@@ -291,50 +344,143 @@ public class NeoIni
         }
         catch { return defaultValue; }
     }
+
+    /// <summary>
+    /// Asynchronously retrieves a value of a specified type from the INI file.
+    /// </summary>
+    /// <typeparam name="T">The expected type of the value (e.g., bool, int, double, string, etc.).</typeparam>
+    /// <param name="section">The section containing the key.</param>
+    /// <param name="key">The name of the key to retrieve.</param>
+    /// <param name="defaultValue">The value to return if the key or section does not exist, or if parsing fails.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the parsed value.</returns>
     public async Task<T> GetValueAsync<T>(string section, string key, T defaultValue = default(T)) =>
         await Task.Run(() => GetValue<T>(section, key, defaultValue));
 
     /// <summary>
-    /// Writes a string to the specified secret in the INI file.
+    /// Updates or creates a key-value pair in the specified section.
     /// </summary>
-    /// <param name="section">The section to which the recording will be made.</param>
-    /// <param name="key">The key by which the recording will be made.</param>
-    /// <param name="value">The value that should be written to the file.</param>
+    /// <typeparam name="T">The type of the value to be stored.</typeparam>
+    /// <param name="section">The name of the section where the value will be written.</param>
+    /// <param name="key">The key to update or create.</param>
+    /// <param name="value">The value to write to the file.</param>
     public void SetKey<T>(string section, string key, T value)
     {
         if (!SectionExists(section)) AddSection(section);
         lock (Lock) Data[section][key] = value.ToString().Trim();
         if (AutoSave) SaveFile();
     }
-    public async Task SetKeyAsync<T>(string section, string key, T value) =>
-        await Task.Run(() => SetKey<T>(section, key, value));
 
     /// <summary>
-    /// Removes the specified key from the INI file section.
+    /// Asynchronously updates or creates a key-value pair in the specified section.
     /// </summary>
-    /// <param name="section">The section in which the deletion is performed.</param>
-    /// <param name="key">The key to be deleted.</param>
+    /// <typeparam name="T">The type of the value to be stored.</typeparam>
+    /// <param name="section">The name of the section where the value will be written.</param>
+    /// <param name="key">The key to update or create.</param>
+    /// <param name="value">The value to write to the file.</param>
+    public async Task SetKeyAsync<T>(string section, string key, T value) => await Task.Run(() => SetKey<T>(section, key, value));
+
+    /// <summary>
+    /// Removes a specific key from a section in the INI file.
+    /// </summary>
+    /// <param name="section">The section containing the key.</param>
+    /// <param name="key">The key to remove.</param>
     public void RemoveKey(string section, string key)
     {
         if (!KeyExists(section, key)) return;
         lock (Lock) Data[section].Remove(key);
         if (AutoSave) SaveFile();
     }
-    public async Task RemoveKeyAsync(string section, string key) =>
-        await Task.Run(() => RemoveKey(section, key));
 
     /// <summary>
-    /// Removes the specified section from the INI file.
+    /// Asynchronously removes a specific key from a section in the INI file.
     /// </summary>
-    /// <param name="section">The section to be deleted.</param>
+    /// <param name="section">The section containing the key.</param>
+    /// <param name="key">The key to remove.</param>
+    public async Task RemoveKeyAsync(string section, string key) => await Task.Run(() => RemoveKey(section, key));
+
+    /// <summary>
+    /// Removes an entire section and all its keys from the INI file.
+    /// </summary>
+    /// <param name="section">The name of the section to remove.</param>
     public void RemoveSection(string section)
     {
         if (!SectionExists(section)) return;
         lock (Lock) Data.Remove(section);
         if (AutoSave) SaveFile();
     }
-    public async Task RemoveSectionAsync(string section) =>
-        await Task.Run(() => RemoveSection(section));
+
+    /// <summary>
+    /// Asynchronously removes an entire section and all its keys from the INI file.
+    /// </summary>
+    /// <param name="section">The name of the section to remove.</param>
+    public async Task RemoveSectionAsync(string section) => await Task.Run(() => RemoveSection(section));
+
+    /// <summary>
+    /// Returns an array of all sections contained in the INI file.
+    /// </summary>
+    /// <returns>An array of strings containing the names of all sections.</returns>
+    public string[] GetAllSections() { lock (Lock) return Data.Keys.ToArray(); }
+
+    /// <summary>
+    /// Asynchronously returns an array of all sections contained in the INI file.
+    /// </summary>
+    /// <returns>A task whose result contains an array of strings with the names of all sections.</returns>
+    public async Task<string[]> GetAllSectionsAsync() => await Task.Run(GetAllSections);
+
+    /// <summary>
+    /// Returns an array of all keys in the specified INI file section.
+    /// </summary>
+    /// <param name="section">Name of the section to receive keys from.</param>
+    /// <returns>An array of strings containing the names of all keys in the section, or an empty array if the section does not exist.</returns>
+    public string[] GetAllKeys(string section)
+    {
+        if (!SectionExists(section)) return [];
+        lock (Lock) return Data[section].Keys.ToArray();
+    }
+
+    /// <summary>
+    /// Asynchronously returns an array of all keys in the specified INI file section.
+    /// </summary>
+    /// <param name="section">Name of the section to receive keys from.</param>
+    /// <returns>A task whose result contains an array of strings containing the names of all keys in the section.</returns>
+    public async Task<string[]> GetAllKeysAsync(string section) => await Task.Run(() => GetAllKeys(section));
+
+    /// <summary>
+    /// Reloads data from the INI file, updating the internal data structure.
+    /// </summary>
+    public void ReloadFromFile() { lock (Lock) Data = GetData(); }
+
+    /// <summary>
+    /// Asynchronously reloads data from an INI file.
+    /// </summary>
+    /// <returns>A task representing an asynchronous reboot operation.</returns>
+    public async Task ReloadFromFileAsync() => await Task.Run(ReloadFromFile);
+
+    /// <summary>
+    /// Removes the INI file from disk.
+    /// </summary>
+    public void DeleteFile() { if (File.Exists(FilePath)) File.Delete(FilePath); }
+
+    /// <summary>
+    /// Asynchronously deletes an INI file from disk.
+    /// </summary>
+    /// <returns>A task representing the asynchronous delete operation.</returns>
+    public async Task DeleteFileAsync() => await Task.Run(DeleteFile);
+
+    /// <summary>
+    /// Deletes the INI file from disk and clears the internal data structure.
+    /// </summary>
+    public void DeleteFileWithData()
+    {
+        DeleteFile();
+        Data.Clear();
+    }
+
+    /// <summary>
+    /// Asynchronously deletes an INI file from disk and cleans up its internal data structure.
+    /// </summary>
+    /// <returns>A task representing the asynchronous delete and cleanup operation.</returns>
+    public async Task DeleteFileWithDataAsync() => await Task.Run(DeleteFileWithData);
 
     #endregion
 }
