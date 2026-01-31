@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace NeoIni;
@@ -15,11 +12,11 @@ namespace NeoIni;
 ///
 /// <b>Target Framework: .NET 9+</b>
 ///
-/// <b>Version: 1.5.3</b>
+/// <b>Version: 1.5.4.1</b>
 ///
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
-public class NeoIni
+public class NeoIniReader
 {
     private Dictionary<string, Dictionary<string, string>> Data;
     private readonly string FilePath;
@@ -31,217 +28,100 @@ public class NeoIni
     public bool AutoSave = true;
 
     /// <summary>
+    /// Determines whether automatic saves occur at regular intervals when <see cref="AutoSave"/> is enabled.
+    /// When <c>false</c>, saves happen after every modification instead of waiting for the interval.
+    /// Default value is <c>true</c>.
+    /// </summary>
+    public bool UseAutoSaveInterval = true;
+
+    /// <summary>
+    /// Interval (in operations) between automatic saves when <see cref="AutoSave"/> is enabled.
+    /// Default value is 5.
+    /// </summary>
+    public int AutoSaveInterval
+    {
+        get => _AutoSaveInterval;
+        set
+        {
+            if (value < 0) throw new ArgumentException("Interval cannot be negative.");
+            UseAutoSaveInterval = value != 0;
+            _AutoSaveInterval = value;
+        }
+    }
+    private int _AutoSaveInterval = 5;
+    private int SaveIterationCounter = 0;
+
+    /// <summary>
+    /// Determines whether backup files (.backup) are created during save operations.
+    /// Default value is <c>true</c>.
+    /// </summary>
+    public bool AutoBackup = true;
+
+    /// <summary>
     /// Determines whether missing keys are automatically added to the file with a default value when requested via <see cref="GetValue{T}"/>. 
 	/// Default is <c>true</c>.
     /// </summary>
     public bool AutoAdd = true;
-    private bool AutoEncryption = false;
-    private string EncryptionPassword;
+
+    /// <summary>
+    /// Determines whether a checksum is calculated and verified during file load and save operations to ensure data integrity.
+    /// When enabled, the configuration file includes a checksum that detects corruption or tampering.
+    /// Default value is <c>true</c>.
+    /// </summary>
+    public bool UseChecksum = true;
+
+    private readonly bool AutoEncryption = false;
     private readonly byte[] EncryptionKey;
     private readonly object Lock = new();
+
+    private readonly NeoIniFileProvider FileProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NeoIni"/> class.
     /// </summary>
     /// <param name="path">The absolute or relative path to the INI file.</param>
-    /// <param name="autoEncryption">If set to <c>true</c>, enables automatic encryption of the file content based on the user's environment.</param>
-    public NeoIni(string path, bool autoEncryption = false)
+    /// <param name="autoEncryption">
+    /// If set to <c>true</c>, enables automatic encryption of the file content based on the user's environment.
+    /// <para><b>Warning:</b> Enabling encryption ties the file to the specific machine/user 
+    /// environment. The file will be unreadable on other computers due to machine-specific key generation!</para>
+    /// </param>
+    public NeoIniReader(string path, bool autoEncryption = false)
     {
         FilePath = path;
         if (autoEncryption)
         {
-            EncryptionPassword = GeneratePasswordFromUserId();
-            EncryptionKey = SHA256.HashData(Encoding.UTF8.GetBytes(EncryptionPassword))[..32];
+            EncryptionKey = NeoIniEncryptionProvider.GetEncryptionKey();
             AutoEncryption = true;
+            FileProvider = new(FilePath, EncryptionKey);
         }
-        Data = GetData();
+        else FileProvider = new(FilePath);
+        Data = FileProvider.GetData(UseChecksum);
     }
 
-    #region File System
-
-    private static string GeneratePasswordFromUserId(int length = 16)
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NeoIni"/> class with custom encryption.
+    /// </summary>
+    /// <param name="path">The absolute or relative path to the INI file.</param>
+    /// <param name="encryptionPassword">The password used to derive the encryption key.</param>
+    public NeoIniReader(string path, string encryptionPassword)
     {
-        string userId = Environment.UserName ?? Environment.GetEnvironmentVariable("USER") ?? "unknown";
-        string fullSeed = $"{userId}:{Environment.MachineName}:{Environment.UserDomainName ?? "local"}";
-        using (var sha256 = SHA256.Create())
-        {
-            byte[] seedBytes = Encoding.UTF8.GetBytes(fullSeed);
-            byte[] hash = sha256.ComputeHash(seedBytes);
-            StringBuilder password = new StringBuilder(length);
-            var rnd = new Random(BitConverter.ToInt32(hash, 0) ^ BitConverter.ToInt32(hash, 4));
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-            for (int i = 0; i < length; i++)
-                password.Append(chars[rnd.Next(chars.Length)]);
-            return password.ToString();
-        }
-    }
-
-    private Dictionary<string, Dictionary<string, string>> GetData()
-    {
-        var data = new Dictionary<string, Dictionary<string, string>>();
-        string directory = Path.GetDirectoryName(FilePath);
-        if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
-        if (!File.Exists(FilePath))
-        {
-            using var stream = File.Create(FilePath);
-            return data;
-        }
-        string currentSection = null;
-        var lines = ReadFile();
-        if (lines == null) return data;
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed)) continue;
-            if (trimmed.StartsWith(';')) continue;
-            if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
-            {
-                currentSection = trimmed.Trim('[', ']');
-                if (!data.ContainsKey(currentSection)) data[currentSection] = new Dictionary<string, string>();
-            }
-            else if (currentSection != null && TryMatchKey(trimmed.AsSpan(), out string key, out string value))
-                data[currentSection][key] = value;
-        }
-        return data;
-    }
-
-    private string[] ReadFile()
-    {
-        if (!File.Exists(FilePath)) return null;
-        try
-        {
-            byte[] fileBytes = File.ReadAllBytes(FilePath);
-            if (fileBytes.Length < 24) return null;
-            string content;
-            if (!ValidateChecksum(fileBytes)) return null;
-            if (!AutoEncryption)
-            {
-                content = Encoding.UTF8.GetString(fileBytes, 0, fileBytes.Length - 8);
-                return content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
-            }
-            byte[] iv = new byte[16];
-            Array.Copy(fileBytes, 0, iv, 0, 16);
-            int encryptedLength = fileBytes.Length - 16 - 8;
-            byte[] encryptedContent = new byte[encryptedLength];
-            Array.Copy(fileBytes, 16, encryptedContent, 0, encryptedLength);
-            using var aes = Aes.Create();
-            aes.Key = EncryptionKey;
-            aes.IV = iv;
-            using var decryptor = aes.CreateDecryptor();
-            using var ms = new MemoryStream(encryptedContent);
-            using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
-            using var sr = new StreamReader(cs, Encoding.UTF8);
-            content = sr.ReadToEnd();
-            return content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
-        }
-        catch { return null; }
+        FilePath = path;
+        if (string.IsNullOrEmpty(encryptionPassword))
+            throw new ArgumentException("Encryption password cannot be null or empty.", nameof(encryptionPassword));
+        EncryptionKey = NeoIniEncryptionProvider.GetEncryptionKey(encryptionPassword);
+        AutoEncryption = true;
+        Data = FileProvider.GetData(UseChecksum);
     }
 
     /// <summary>
     /// Saves the current data to an INI file with checksums and encryption applied, if enabled.
     /// </summary>
-    public void SaveFile()
-    {
-        var content = new List<string>();
-        lock (Lock)
-        {
-            foreach (var section in Data)
-            {
-                content.Add($"[{section.Key}]");
-                foreach (var kvp in section.Value)
-                    content.Add($"{kvp.Key} = {kvp.Value}");
-                content.Add("");
-            }
-        }
-        string fullText = string.Join(Environment.NewLine, content);
-        byte[] plaintextBytes = Encoding.UTF8.GetBytes(fullText);
-        byte[] dataWithChecksum;
-        if (!AutoEncryption)
-        {
-            dataWithChecksum = AddChecksum(plaintextBytes);
-            File.WriteAllBytes(FilePath, dataWithChecksum);
-            return;
-        }
-        using var aes = Aes.Create();
-        aes.Key = EncryptionKey;
-        aes.GenerateIV();
-        using var encryptor = aes.CreateEncryptor();
-        using var ms = new MemoryStream();
-        ms.Write(aes.IV, 0, aes.IV.Length);
-        using var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write);
-        cs.Write(plaintextBytes, 0, plaintextBytes.Length);
-        cs.FlushFinalBlock();
-        byte[] encryptedData = ms.ToArray();
-        dataWithChecksum = AddChecksum(encryptedData);
-        File.WriteAllBytes(FilePath, dataWithChecksum);
-    }
+    public void SaveFile() => FileProvider.SaveFile(NeoIniParser.GetContent(Lock, Data), UseChecksum, AutoBackup);
 
     /// <summary>
     /// Asynchronously saves the current data to the INI file.
     /// </summary>
-    public async Task SaveFileAsync() => await Task.Run(SaveFile);
-
-    private static bool ValidateChecksum(byte[] data)
-    {
-        if (data.Length < 8) return false;
-        byte[] checksumWithPlaceholder = new byte[data.Length];
-        Array.Copy(data, checksumWithPlaceholder, data.Length - 8);
-        Array.Copy(new byte[8], 0, checksumWithPlaceholder, data.Length - 8, 8);
-        byte[] calculatedChecksum = SHA256.HashData(checksumWithPlaceholder)[..8];
-        return data[^8..].SequenceEqual(calculatedChecksum);
-    }
-
-    private static byte[] AddChecksum(byte[] data)
-    {
-        byte[] checksumWithPlaceholder = new byte[data.Length + 8];
-        Array.Copy(data, checksumWithPlaceholder, data.Length);
-        Array.Copy(new byte[8], 0, checksumWithPlaceholder, data.Length, 8);
-        byte[] checksum = SHA256.HashData(checksumWithPlaceholder)[..8];
-        Array.Copy(checksum, 0, checksumWithPlaceholder, data.Length, 8);
-        return checksumWithPlaceholder;
-    }
-
-    #endregion
-
-    #region Raw Data
-
-    private string GetStringRaw(string section, string keyName)
-    {
-        lock (Lock)
-            return Data.TryGetValue(section, out var sec) && sec.TryGetValue(keyName, out var val) ? val : null;
-    }
-
-    private static T TryParseValue<T>(string value, T defaultValue)
-    {
-        if (string.IsNullOrWhiteSpace(value)) return defaultValue;
-        if (typeof(T) == typeof(bool))
-            return bool.TryParse(value, out bool parsed) ? (T)(object)parsed : defaultValue;
-        try
-        {
-            if (value == null || string.IsNullOrWhiteSpace(value))
-                return defaultValue;
-            object parsed = Convert.ChangeType(value.Trim(), typeof(T));
-            return (T)parsed;
-        }
-        catch { return defaultValue; }
-    }
-
-    private static bool TryMatchKey(ReadOnlySpan<char> line, out string key, out string value)
-    {
-        key = value = null;
-        int eqIndex = line.IndexOf('=');
-        if (eqIndex == -1) return false;
-        ReadOnlySpan<char> keySpan = line[..eqIndex].Trim();
-        ReadOnlySpan<char> valueSpan = line[(eqIndex + 1)..].Trim();
-        if (keySpan.IsEmpty || valueSpan.IsEmpty) return false;
-        key = keySpan.ToString();
-        value = valueSpan.ToString();
-        return true;
-    }
-
-    #endregion
-
-    #region User Methods
+    public async Task SaveFileAsync() => await FileProvider.SaveFileAsync(NeoIniParser.GetContent(Lock, Data), UseChecksum, AutoBackup);
 
     /// <summary>
     /// Determines whether a specific section exists in the loaded data.
@@ -287,7 +167,8 @@ public class NeoIni
     {
         if (SectionExists(section)) return;
         lock (Lock) Data[section] = new Dictionary<string, string>();
-        if (AutoSave) SaveFile();
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            SaveFile();
     }
 
     /// <summary>
@@ -308,7 +189,8 @@ public class NeoIni
         if (!SectionExists(section)) AddSection(section);
         if (KeyExists(section, key)) return;
         lock (Lock) Data[section][key] = value.ToString().Trim();
-        if (AutoSave) SaveFile();
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            SaveFile();
     }
 
     /// <summary>
@@ -334,13 +216,13 @@ public class NeoIni
     {
         try
         {
-            string stringValue = GetStringRaw(section, key);
+            string stringValue = NeoIniParser.GetStringRaw(Lock, Data, section, key);
             if (stringValue == null)
             {
                 if (AutoAdd) AddKeyInSection(section, key, defaultValue?.ToString() ?? "");
                 return defaultValue;
             }
-            return TryParseValue<T>(stringValue, defaultValue);
+            return NeoIniParser.TryParseValue<T>(stringValue, defaultValue);
         }
         catch { return defaultValue; }
     }
@@ -367,7 +249,8 @@ public class NeoIni
     {
         if (!SectionExists(section)) AddSection(section);
         lock (Lock) Data[section][key] = value.ToString().Trim();
-        if (AutoSave) SaveFile();
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            SaveFile();
     }
 
     /// <summary>
@@ -388,7 +271,8 @@ public class NeoIni
     {
         if (!KeyExists(section, key)) return;
         lock (Lock) Data[section].Remove(key);
-        if (AutoSave) SaveFile();
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            SaveFile();
     }
 
     /// <summary>
@@ -406,7 +290,8 @@ public class NeoIni
     {
         if (!SectionExists(section)) return;
         lock (Lock) Data.Remove(section);
-        if (AutoSave) SaveFile();
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            SaveFile();
     }
 
     /// <summary>
@@ -448,7 +333,7 @@ public class NeoIni
     /// <summary>
     /// Reloads data from the INI file, updating the internal data structure.
     /// </summary>
-    public void ReloadFromFile() { lock (Lock) Data = GetData(); }
+    public void ReloadFromFile() { lock (Lock) Data = FileProvider.GetData(UseChecksum); }
 
     /// <summary>
     /// Asynchronously reloads data from an INI file.
@@ -459,7 +344,7 @@ public class NeoIni
     /// <summary>
     /// Removes the INI file from disk.
     /// </summary>
-    public void DeleteFile() { if (File.Exists(FilePath)) File.Delete(FilePath); }
+    public void DeleteFile() => FileProvider.DeleteFile();
 
     /// <summary>
     /// Asynchronously deletes an INI file from disk.
@@ -482,5 +367,13 @@ public class NeoIni
     /// <returns>A task representing the asynchronous delete and cleanup operation.</returns>
     public async Task DeleteFileWithDataAsync() => await Task.Run(DeleteFileWithData);
 
-    #endregion
+    /// <summary>
+    /// Returns the current encryption password if encryption is enabled, or a status message if disabled.
+    /// </summary>
+    /// <returns>The generated encryption password or status message.</returns>
+    public string GetEncryptionPassword()
+    {
+        if (!AutoEncryption) return "AutoEncryption is disabled";
+        return NeoIniEncryptionProvider.GetEncryptionPassword();
+    }
 }

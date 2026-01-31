@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net8.0</TargetFrameworks>
 		<PackageId>NeoIni</PackageId>
-		<Version>1.5.3</Version>
+		<Version>1.5.4.1</Version>
 		<Authors>Lonewolf239</Authors>
 		<Description>Modern INI reader/writer for .NET 8+. AES encryption, thread-safe.</Description>
 		<PackageTags>ini;config;encryption;ini-parser;configuration;secure-config;aes-ini;.NET9</PackageTags>

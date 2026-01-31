@@ -9,14 +9,14 @@ dotnet add package NeoIni
 ```
 
 **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)  
-**Version:** `1.5.3` | **.NET 8+**
+**Version:** `1.5.4.1` | **.NET 8+**
 
 ## Features
 
 - Read and parse typed values (bool, int, float, double, string, etc.) from INI files
 - Automatic type detection and parsing with fallback to default values
 - Thread-safe operations using locks
-- Automatic file saving and section/key creation (configurable via `AutoSave` and `AutoAdd`)
+- Automatic file saving and section/key creation (configurable via `AutoSave`, `AutoAdd`, `AutoBackup`, etc.)
 - Built-in checksum validation (SHA256) for data integrity
 - Optional AES-256 encryption with user-specific password generation
 - Support for standard INI format with sections and key-value pairs
@@ -32,8 +32,8 @@ dotnet add package NeoIni
 ### Creating a NeoIni Instance
 
 ```cs
-NeoIni reader = new("config.ini");                   // Standard usage
-NeoIni encryptedReader = new("config.ini", true);    // With auto-encryption
+NeoIniReader reader = new("config.ini");                   // Standard usage
+NeoIniReader encryptedReader = new("config.ini", true);    // With auto-encryption
 ```
 
 ### Reading Values
@@ -55,13 +55,18 @@ reader.SetKey("Section1", "Enabled", true);
 
 ## Configuration Options
 
-- `AutoSave = true`: Automatically saves changes to disk after modifications
-- `AutoAdd = true`: Creates missing sections/keys with default values on read
+- `AutoSave = true`: Automatically saves changes to disk after modifications.
+- `UseAutoSaveInterval = true`: When AutoSave is enabled, determines if saves occur at regular intervals instead of after every single modification.
+- `AutoSaveInterval = 5`: Number of operations between automatic saves when both AutoSave and UseAutoSaveInterval are enabled. Set to 0 to disable interval saving.
+- `AutoBackup = true`: Creates backup files (.backup) during save operations for safety.
+- `AutoAdd = true`: Automatically creates missing sections/keys with default values when reading via `GetValue<T>`.
+- `UseChecksum = true`: Calculates and verifies checksums during load/save operations to detect corruption or tampering.
+
 
 ## Example
 
 ```cs
-NeoIni reader = new("config.ini");
+NeoIniReader reader = new("config.ini");
 
 reader.SetKey("Database", "Host", "localhost");
 reader.SetKey("Database", "Port", 5432);
