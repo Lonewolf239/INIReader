@@ -12,6 +12,7 @@ internal sealed class NeoIniFileProvider
 {
     private readonly string FilePath;
     private string TempFilePath => FilePath + ".tmp";
+    private string BackupFilePath => FilePath + ".backup";
     private readonly byte[] EncryptionKey;
     private readonly bool AutoEncryption = false;
 
@@ -55,15 +56,35 @@ internal sealed class NeoIniFileProvider
 
     internal void DeleteFile() { if (File.Exists(FilePath)) File.Delete(FilePath); }
 
-    private string[] ReadFile(bool useChecksum)
+    private string[] CheckBackup(bool useChecksum)
     {
-        if (!File.Exists(FilePath)) return null;
+        if (!File.Exists(BackupFilePath)) return null;
+        return ReadFile(BackupFilePath, useChecksum, true);
+    }
+
+    private string[] ReadFile(bool useChecksum) => ReadFile(FilePath, useChecksum);
+
+    private string[] ReadFile(string path, bool useChecksum, bool isBackup = false)
+    {
+        if (!File.Exists(path))
+        {
+            if (isBackup) return null;
+            return CheckBackup(useChecksum);
+        }
         try
         {
-            byte[] fileBytes = File.ReadAllBytes(FilePath);
-            if (fileBytes.Length < 24) return null;
+            byte[] fileBytes = File.ReadAllBytes(path);
+            if (fileBytes.Length < 24)
+            {
+                if (isBackup) return null;
+                return CheckBackup(useChecksum);
+            }
             string content;
-            if (!ValidateChecksum(fileBytes, useChecksum)) return null;
+            if (!ValidateChecksum(fileBytes, useChecksum))
+            {
+                if (isBackup) return null;
+                return CheckBackup(useChecksum);
+            }
             if (!AutoEncryption)
             {
                 content = Encoding.UTF8.GetString(fileBytes, 0, fileBytes.Length - 8);
@@ -86,9 +107,16 @@ internal sealed class NeoIniFileProvider
         }
         catch (CryptographicException ex)
         {
+            if (isBackup) return null;
+            var data = CheckBackup(useChecksum);
+            if (data != null) return data;
             throw new InvalidOperationException("Failed to decrypt configuration file. Invalid encryption key or corrupted data.", ex);
         }
-        catch { return null; }
+        catch
+        {
+            if (isBackup) return null;
+            return CheckBackup(useChecksum);
+        }
     }
 
     internal void SaveFile(string content, bool useChecksum, bool useBackup)
@@ -115,7 +143,7 @@ internal sealed class NeoIniFileProvider
             dataWithChecksum = AddChecksum(encryptedData, useChecksum);
             File.WriteAllBytes(TempFilePath, dataWithChecksum);
         }
-        if (useBackup) File.Replace(TempFilePath, FilePath, FilePath + ".backup");
+        if (useBackup) File.Replace(TempFilePath, FilePath, BackupFilePath);
         else File.Replace(TempFilePath, FilePath, null);
     }
 
@@ -143,7 +171,7 @@ internal sealed class NeoIniFileProvider
             dataWithChecksum = AddChecksum(encryptedData, useChecksum);
             await File.WriteAllBytesAsync(TempFilePath, dataWithChecksum).ConfigureAwait(false);
         }
-        if (useBackup) File.Replace(TempFilePath, FilePath, FilePath + ".backup");
+        if (useBackup) File.Replace(TempFilePath, FilePath, BackupFilePath);
         else File.Replace(TempFilePath, FilePath, null);
     }
 

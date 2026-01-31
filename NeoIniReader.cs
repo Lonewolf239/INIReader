@@ -12,7 +12,7 @@ namespace NeoIni;
 ///
 /// <b>Target Framework: .NET 8+</b>
 ///
-/// <b>Version: 1.5.4.2</b>
+/// <b>Version: 1.5.4.3</b>
 ///
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
@@ -184,7 +184,13 @@ public class NeoIniReader : IDisposable
     /// Asynchronously adds a new section to the file if it does not already exist.
     /// </summary>
     /// <param name="section">The name of the new section.</param>
-    public async Task AddSectionAsync(string section) => await Task.Run(() => AddSection(section));
+    public async Task AddSectionAsync(string section)
+    {
+        if (SectionExists(section)) return;
+        lock (Lock) Data[section] = new Dictionary<string, string>();
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            await SaveFileAsync();
+    }
 
     /// <summary>
     /// Adds a new key-value pair to a specified section.
@@ -209,8 +215,14 @@ public class NeoIniReader : IDisposable
     /// <param name="section">The name of the target section.</param>
     /// <param name="key">The name of the key to create.</param>
     /// <param name="value">The value to assign to the key.</param>
-    public async Task AddKeyInSectionAsync<T>(string section, string key, T value) =>
-        await Task.Run(() => AddKeyInSection<T>(section, key, value));
+    public async Task AddKeyInSectionAsync<T>(string section, string key, T value)
+    {
+        if (!SectionExists(section)) AddSection(section);
+        if (KeyExists(section, key)) return;
+        lock (Lock) Data[section][key] = value.ToString().Trim();
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            await SaveFileAsync();
+    }
 
     /// <summary>
     /// Retrieves a value of a specified type from the INI file.
@@ -269,7 +281,13 @@ public class NeoIniReader : IDisposable
     /// <param name="section">The name of the section where the value will be written.</param>
     /// <param name="key">The key to update or create.</param>
     /// <param name="value">The value to write to the file.</param>
-    public async Task SetKeyAsync<T>(string section, string key, T value) => await Task.Run(() => SetKey<T>(section, key, value));
+    public async Task SetKeyAsync<T>(string section, string key, T value)
+    {
+        if (!SectionExists(section)) AddSection(section);
+        lock (Lock) Data[section][key] = value.ToString().Trim();
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            await SaveFileAsync();
+    }
 
     /// <summary>
     /// Removes a specific key from a section in the INI file.
@@ -289,7 +307,13 @@ public class NeoIniReader : IDisposable
     /// </summary>
     /// <param name="section">The section containing the key.</param>
     /// <param name="key">The key to remove.</param>
-    public async Task RemoveKeyAsync(string section, string key) => await Task.Run(() => RemoveKey(section, key));
+    public async Task RemoveKeyAsync(string section, string key)
+    {
+        if (!KeyExists(section, key)) return;
+        lock (Lock) Data[section].Remove(key);
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            await SaveFileAsync();
+    }
 
     /// <summary>
     /// Removes an entire section and all its keys from the INI file.
@@ -307,7 +331,13 @@ public class NeoIniReader : IDisposable
     /// Asynchronously removes an entire section and all its keys from the INI file.
     /// </summary>
     /// <param name="section">The name of the section to remove.</param>
-    public async Task RemoveSectionAsync(string section) => await Task.Run(() => RemoveSection(section));
+    public async Task RemoveSectionAsync(string section)
+    {
+        if (!SectionExists(section)) return;
+        lock (Lock) Data.Remove(section);
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            await SaveFileAsync();
+    }
 
     /// <summary>
     /// Returns an array of all sections contained in the INI file.
