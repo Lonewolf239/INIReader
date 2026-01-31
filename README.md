@@ -60,8 +60,8 @@ reader.SetKey("Database", "Host", "localhost");
 reader.SetKey("Database", "Port", 5432);
 reader.SetKey("Settings", "AutoSave", true);
 
-string host = reader.GetValue("Database", "Host", "127.0.0.1");
-int port = reader.GetValue("Database", "Port", 3306);
+string host = reader.GetValue<string>("Database", "Host", "127.0.0.1");
+int port = reader.GetValue<int>("Database", "Port", 3306);
 
 Console.WriteLine($"DB: {host}:{port}");
 ```
