@@ -20,23 +20,26 @@ class NeoIniDemo
         await AsyncOperationsDemo();
         AutoFeaturesDemo();
         FileErrorRecoveryDemo();
+        EventsDemo();
         Console.Write("Press Y to cleanup file: ");
         if (Console.ReadKey().Key == ConsoleKey.Y)
         {
             Console.WriteLine();
-            await CleanupDemo();
+            CleanupDemo();
         }
 
         Console.WriteLine("\n\nDemonstration completed!");
         Console.WriteLine("Press any key to exit...");
         Console.ReadKey();
+        Console.Clear();
     }
 
     private static void BasicCreationDemo()
     {
-        Console.WriteLine("\n1. FILE CREATION WITH DEFAULTS");
-
+        Console.Clear();
+        Console.WriteLine("1. FILE CREATION WITH DEFAULTS");
         using var ini = new NeoIniReader(TestFile, Encryption);
+
         Console.WriteLine($"File created: {TestFile}");
         Console.WriteLine("All features use default settings:");
         Console.WriteLine($"- AutoAdd: {ini.AutoAdd}");
@@ -52,7 +55,8 @@ class NeoIniDemo
 
     private static void SectionsDemo()
     {
-        Console.WriteLine("\n2. WORKING WITH SECTIONS");
+        Console.Clear();
+        Console.WriteLine("2. WORKING WITH SECTIONS");
         using var ini = new NeoIniReader(TestFile, Encryption);
 
         Console.WriteLine($"Section 'User' exists: {ini.SectionExists("User")}");
@@ -76,7 +80,8 @@ class NeoIniDemo
 
     private static void KeysValuesDemo()
     {
-        Console.WriteLine("\n3. KEYS AND VALUES");
+        Console.Clear();
+        Console.WriteLine("3. KEYS AND VALUES");
         using var ini = new NeoIniReader(TestFile, Encryption);
 
         ini.AddKeyInSection("User", "Name", "John Doe");
@@ -93,7 +98,7 @@ class NeoIniDemo
         Console.WriteLine($"Name: {name}");
         Console.WriteLine($"Age: {age}");
         Console.WriteLine($"Admin: {isAdmin}");
-        Console.WriteLine($"Salary: {salary:C}");
+        Console.WriteLine($"Salary: {salary}");
 
         ini.SetKey("User", "Age", 31);
         Console.WriteLine("Age updated to 31");
@@ -119,7 +124,8 @@ class NeoIniDemo
 
     private static async Task AsyncOperationsDemo()
     {
-        Console.WriteLine("\n4. ASYNCHRONOUS OPERATIONS");
+        Console.Clear();
+        Console.WriteLine("4. ASYNCHRONOUS OPERATIONS");
         using var ini = new NeoIniReader(TestFile, Encryption);
 
         await ini.AddSectionAsync("Settings");
@@ -131,18 +137,15 @@ class NeoIniDemo
         int volume = await ini.GetValueAsync("Settings", "Volume", 50);
         Console.WriteLine($"Theme: {theme}, Volume: {volume}%");
 
-        bool exists = await ini.KeyExistsAsync("Settings", "Theme");
-        Console.WriteLine($"Key 'Theme' exists (async): {exists}");
-
         Console.WriteLine("Press any key to continue...");
         Console.ReadKey(true);
     }
 
     private static void AutoFeaturesDemo()
     {
-        Console.WriteLine("\n5. AUTOMATIC FEATURES");
+        Console.Clear();
+        Console.WriteLine("5. AUTOMATIC FEATURES");
         using var ini = new NeoIniReader(TestFile, Encryption);
-        ini.UseAutoSaveInterval = true;
 
         ini.SetKey("Database", "Host", "localhost");
         ini.SetKey("Database", "Port", 5432);
@@ -156,11 +159,12 @@ class NeoIniDemo
         Console.WriteLine($"Auto-save every {ini.AutoSaveInterval} operations");
 
         Console.Write("Adding logs: ");
+        ini.UseAutoSaveInterval = true;
+        ini.OnAutoSave += () => Console.Write("SAVED ");
         for (int i = 1; i <= 6; i++)
         {
             ini.SetKey("Logs", $"Entry{i}", $"Log message {i}");
-            if (i % 3 == 0) Console.Write("SAVED ");
-            else Console.Write(".");
+            if (i % 3 != 0) Console.Write(".");
         }
         Console.WriteLine("Auto-save triggered");
 
@@ -170,9 +174,10 @@ class NeoIniDemo
 
     private static void FileErrorRecoveryDemo()
     {
-        Console.WriteLine("\n6. FILE ERROR RECOVERY");
-
+        Console.Clear();
+        Console.WriteLine("6. FILE ERROR RECOVERY");
         using var ini = new NeoIniReader(TestFile, Encryption);
+
         Console.WriteLine("\nBEFORE DAMAGE - All sections:");
         ShowContent(ini);
 
@@ -192,11 +197,53 @@ class NeoIniDemo
         Console.ReadKey(true);
     }
 
-    private static async Task CleanupDemo()
+    private static void EventsDemo()
     {
-        Console.WriteLine("\n7. COMPLETE CLEANUP");
-
+        Console.Clear();
+        Console.WriteLine("7. EVENTS AND ACTIONS DEMONSTRATION");
         using var ini = new NeoIniReader(TestFile, Encryption);
+
+        ini.OnKeyAdded += (section, key, value) => Console.WriteLine($"NEW KEY ADDED: [{section}] {key} = '{value}'");
+        ini.OnKeyChanged += (section, key, value) => Console.WriteLine($"KEY CHANGED: [{section}] {key} = '{value}'");
+        ini.OnKeyRemoved += (section, key) => Console.WriteLine($"KEY REMOVED: [{section}] {key}");
+
+        ini.OnSectionAdded += section => Console.WriteLine($"NEW SECTION: [{section}]");
+        ini.OnSectionRemoved += section => Console.WriteLine($"SECTION REMOVED: [{section}]");
+
+        ini.OnSave += () => Console.WriteLine("SAVING FILE...");
+        ini.OnLoad += () => Console.WriteLine("FILE LOADED!");
+
+        Console.WriteLine("Demonstrating Events/Actions:");
+
+        Console.WriteLine("1. Added EventsDemo section");
+        ini.AddSection("EventsDemo");
+
+        Console.WriteLine("2. Added Counter key");
+        ini.AddKeyInSection("EventsDemo", "Counter", 0);
+
+        Console.WriteLine("3. Changed Counter value");
+        ini.SetKey("EventsDemo", "Counter", 42);
+
+        Console.WriteLine("4. Added Status key");
+        ini.AddKeyInSection("EventsDemo", "Status", "Active");
+
+        Console.WriteLine("5. Removed Status key");
+        ini.RemoveKey("EventsDemo", "Status");
+
+        Console.WriteLine("6. Manual save triggered");
+        ini.SaveFile();
+
+        Console.WriteLine("\nEvents demonstration completed!");
+        Console.WriteLine("Press any key to continue...");
+        Console.ReadKey(true);
+    }
+
+    private static void CleanupDemo()
+    {
+        Console.Clear();
+        Console.WriteLine("8. COMPLETE CLEANUP");
+        using var ini = new NeoIniReader(TestFile, Encryption);
+
         var sections = ini.GetAllSections();
         Console.WriteLine("Final content before cleanup:");
         ShowContent(ini);
@@ -205,11 +252,8 @@ class NeoIniDemo
         ini.RemoveSection("Logs");
         Console.WriteLine("Removed key 'Age' and section 'Logs'");
 
-        await ini.DeleteFileWithDataAsync();
+        ini.DeleteFileWithData();
         Console.WriteLine("File deleted from disk + memory cleared");
-
-        var finalIni = new NeoIniReader(TestFile, Encryption);
-        Console.WriteLine($"File is empty: {finalIni.GetAllSections().Length == 0}");
     }
 
     private static void ShowContent(NeoIniReader ini)

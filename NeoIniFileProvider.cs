@@ -60,7 +60,11 @@ internal sealed class NeoIniFileProvider
         return data;
     }
 
-    internal void DeleteFile() { if (File.Exists(FilePath)) File.Delete(FilePath); }
+    internal void DeleteFile()
+    {
+        if (File.Exists(FilePath)) File.Delete(FilePath);
+        if (File.Exists(TempFilePath)) File.Delete(TempFilePath);
+    }
 
     private string[] CheckBackup(bool useChecksum)
     {
@@ -128,6 +132,7 @@ internal sealed class NeoIniFileProvider
 
     internal void SaveFile(string content, bool useChecksum, bool useBackup)
     {
+        if (string.IsNullOrEmpty(content)) return;
         byte[] plaintextBytes = Encoding.UTF8.GetBytes(content);
         byte[] dataWithChecksum;
         try
@@ -160,6 +165,7 @@ internal sealed class NeoIniFileProvider
 
     internal async Task SaveFileAsync(string content, bool useChecksum, bool useBackup)
     {
+        if (string.IsNullOrEmpty(content)) return;
         byte[] plaintextBytes = Encoding.UTF8.GetBytes(content);
         byte[] dataWithChecksum;
         try

@@ -12,7 +12,7 @@ namespace NeoIni;
 /// <br/>
 /// <b>Target Framework: .NET 6+</b>
 /// <br/>
-/// <b>Version: 1.5.6</b>
+/// <b>Version: 1.5.6.2</b>
 /// <br/>
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
@@ -220,14 +220,6 @@ public class NeoIniReader : IDisposable
     public bool SectionExists(string section) { lock (Lock) return Data.ContainsKey(section); }
 
     /// <summary>
-    /// Asynchronously determines whether a specific section exists in the loaded data.
-    /// </summary>
-    /// <param name="section">The name of the section to search for.</param>
-    /// <returns>A task that represents the asynchronous operation.
-	/// The task result contains <c>true</c> if the section exists; otherwise, <c>false</c>.</returns>
-    public async Task<bool> SectionExistsAsync(string section) => await Task.Run(() => SectionExists(section));
-
-    /// <summary>
     /// Determines whether a specific key exists within a given section.
     /// </summary>
     /// <param name="section">The name of the section to search in.</param>
@@ -238,15 +230,6 @@ public class NeoIniReader : IDisposable
         if (!SectionExists(section)) return false;
         lock (Lock) return Data[section].ContainsKey(key);
     }
-
-    /// <summary>
-    /// Asynchronously determines whether a specific key exists within a given section.
-    /// </summary>
-    /// <param name="section">The name of the section to search in.</param>
-    /// <param name="key">The name of the key to search for.</param>
-    /// <returns>A task that represents the asynchronous operation.
-	/// The task result contains <c>true</c> if the key exists; otherwise, <c>false</c>.</returns>
-    public async Task<bool> KeyExistsAsync(string section, string key) => await Task.Run(() => KeyExists(section, key));
 
     /// <summary>
     /// Adds a new section to the file if it does not already exist.
@@ -310,7 +293,7 @@ public class NeoIniReader : IDisposable
     /// <param name="value">The value to assign to the key.</param>
     public async Task AddKeyInSectionAsync<T>(string section, string key, T value)
     {
-        if (!SectionExists(section)) AddSection(section);
+        if (!SectionExists(section)) await AddSectionAsync(section);
         if (KeyExists(section, key)) return;
         string valueString = value.ToString().Trim();
         lock (Lock) Data[section][key] = valueString;
@@ -348,14 +331,27 @@ public class NeoIniReader : IDisposable
 
     /// <summary>
     /// Asynchronously retrieves a value of a specified type from the INI file.
+    /// Automatically parses the string value to the target type.
     /// </summary>
     /// <typeparam name="T">The expected type of the value (e.g., bool, int, double, string, etc.).</typeparam>
     /// <param name="section">The section containing the key.</param>
     /// <param name="key">The name of the key to retrieve.</param>
     /// <param name="defaultValue">The value to return if the key or section does not exist, or if parsing fails.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the parsed value.</returns>
-    public async Task<T> GetValueAsync<T>(string section, string key, T defaultValue = default(T)) =>
-        await Task.Run(() => GetValue<T>(section, key, defaultValue));
+    /// <returns>A task that represents the asynchronous operation. The task result contains the parsed value, or <paramref name="defaultValue"/> if retrieval fails.</returns>
+    public async Task<T> GetValueAsync<T>(string section, string key, T defaultValue = default(T))
+    {
+        try
+        {
+            string stringValue = NeoIniParser.GetStringRaw(Lock, Data, section, key);
+            if (stringValue == null)
+            {
+                if (AutoAdd) await AddKeyInSectionAsync(section, key, defaultValue?.ToString() ?? "");
+                return defaultValue;
+            }
+            return NeoIniParser.TryParseValue<T>(stringValue, defaultValue, OnError);
+        }
+        catch { return defaultValue; }
+    }
 
     /// <summary>
     /// Updates or creates a key-value pair in the specified section.
@@ -388,7 +384,7 @@ public class NeoIniReader : IDisposable
     /// <param name="value">The value to write to the file.</param>
     public async Task SetKeyAsync<T>(string section, string key, T value)
     {
-        if (!SectionExists(section)) AddSection(section);
+        if (!SectionExists(section)) await AddSectionAsync(section);
         bool keyExists = KeyExists(section, key);
         string valueString = value.ToString().Trim();
         lock (Lock) Data[section][key] = valueString;
@@ -474,12 +470,6 @@ public class NeoIniReader : IDisposable
     public string[] GetAllSections() { lock (Lock) return Data.Keys.ToArray(); }
 
     /// <summary>
-    /// Asynchronously returns an array of all sections contained in the INI file.
-    /// </summary>
-    /// <returns>A task whose result contains an array of strings with the names of all sections.</returns>
-    public async Task<string[]> GetAllSectionsAsync() => await Task.Run(GetAllSections);
-
-    /// <summary>
     /// Returns an array of all keys in the specified INI file section.
     /// </summary>
     /// <param name="section">Name of the section to receive keys from.</param>
@@ -491,13 +481,6 @@ public class NeoIniReader : IDisposable
     }
 
     /// <summary>
-    /// Asynchronously returns an array of all keys in the specified INI file section.
-    /// </summary>
-    /// <param name="section">Name of the section to receive keys from.</param>
-    /// <returns>A task whose result contains an array of strings containing the names of all keys in the section.</returns>
-    public async Task<string[]> GetAllKeysAsync(string section) => await Task.Run(() => GetAllKeys(section));
-
-    /// <summary>
     /// Returns a dictionary containing all key-value pairs from the specified section.
     /// </summary>
     /// <param name="section">The name of the section to retrieve.</param>
@@ -507,13 +490,6 @@ public class NeoIniReader : IDisposable
         if (!SectionExists(section)) return new Dictionary<string, string>();
         lock (Lock) return new Dictionary<string, string>(Data[section]);
     }
-
-    /// <summary>
-    /// Asynchronously returns a dictionary containing all key-value pairs from the specified section.
-    /// </summary>
-    /// <param name="section">The name of the section to retrieve.</param>
-    /// <returns>A task whose result contains a read-only copy of the section's key-value pairs.</returns>
-    public async Task<Dictionary<string, string>> GetSectionAsync(string section) => await Task.Run(() => GetSection(section));
 
     /// <summary>
     /// Searches for a specific key across all sections and returns a dictionary mapping section names to their corresponding values.
@@ -533,13 +509,6 @@ public class NeoIniReader : IDisposable
         }
         return results;
     }
-
-    /// <summary>
-    /// Asynchronously searches for a specific key across all sections.
-    /// </summary>
-    /// <param name="key">The key name to search for across all sections.</param>
-    /// <returns>A task whose result contains a dictionary mapping section names to their corresponding key values.</returns>
-    public async Task<Dictionary<string, string>> FindKeyInAllSectionsAsync(string key) => await Task.Run(() => FindKeyInAllSections(key));
 
     /// <summary>
     /// Clears all keys from the specified section while keeping the section itself intact.
@@ -685,13 +654,6 @@ public class NeoIniReader : IDisposable
     }
 
     /// <summary>
-    /// Asynchronously searches for keys or values matching a pattern across all sections.
-    /// </summary>
-    /// <param name="pattern">The search pattern to match against keys and values (case-insensitive).</param>
-    /// <returns>A task whose result contains a list of matching entries as (section, key, value) tuples.</returns>
-    public async Task<List<(string section, string key, string value)>> SearchAsync(string pattern) => await Task.Run(() => Search(pattern));
-
-    /// <summary>
     /// Reloads data from the INI file, updating the internal data structure.
     /// </summary>
     public void ReloadFromFile()
@@ -701,21 +663,9 @@ public class NeoIniReader : IDisposable
     }
 
     /// <summary>
-    /// Asynchronously reloads data from an INI file.
-    /// </summary>
-    /// <returns>A task representing an asynchronous reboot operation.</returns>
-    public async Task ReloadFromFileAsync() => await Task.Run(ReloadFromFile);
-
-    /// <summary>
     /// Removes the INI file from disk.
     /// </summary>
     public void DeleteFile() => FileProvider.DeleteFile();
-
-    /// <summary>
-    /// Asynchronously deletes an INI file from disk.
-    /// </summary>
-    /// <returns>A task representing the asynchronous delete operation.</returns>
-    public async Task DeleteFileAsync() => await Task.Run(DeleteFile);
 
     /// <summary>
     /// Deletes the INI file from disk and clears the internal data structure.
@@ -728,10 +678,9 @@ public class NeoIniReader : IDisposable
     }
 
     /// <summary>
-    /// Asynchronously deletes an INI file from disk and cleans up its internal data structure.
+    /// Clears the internal data structure.
     /// </summary>
-    /// <returns>A task representing the asynchronous delete and cleanup operation.</returns>
-    public async Task DeleteFileWithDataAsync() => await Task.Run(DeleteFileWithData);
+    public void Clear() { lock (Lock) Data.Clear(); }
 
     /// <summary>
     /// Returns the current encryption password if encryption is enabled, or a status message if disabled.
@@ -743,10 +692,4 @@ public class NeoIniReader : IDisposable
         if (CustomEncryptionPassword) return "CustomEncryptionPassword is used. For security reasons, the password is not saved.";
         return NeoIniEncryptionProvider.GetEncryptionPassword();
     }
-
-    /// <summary>
-    /// Asynchronously returns the current encryption password if encryption is enabled, or a status message if disabled.
-    /// </summary>
-    /// <returns>A task that represents the asynchronous operation. The task result contains the generated encryption password or status message.</returns>
-    public async Task<string> GetEncryptionPasswordAsync() => await Task.Run(GetEncryptionPassword);
 }

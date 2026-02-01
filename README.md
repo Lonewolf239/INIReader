@@ -9,7 +9,7 @@ dotnet add package NeoIni
 ```
 
 **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)  
-**Version:** `1.5.6` | **.NET 6+**
+**Version:** `1.5.6.2` | **.NET 6+**
 **Developer:** [Lonewolf239](https://github.com/Lonewolf239)
 
 ## Features
@@ -115,27 +115,27 @@ reader.DeleteFileWithData();          // Delete file + clear data
 | `AddKeyInSection<T>` | Add unique key-value | `AddKeyInSectionAsync<T>` |
 | `RemoveKey` | Delete specific key | `RemoveKeyAsync` |
 | `RemoveSection` | Delete entire section | `RemoveSectionAsync` |
-| `GetAllSections` | List all sections | `GetAllSectionsAsync` |
-| `GetAllKeys` | List section keys | `GetAllKeysAsync` |
-| `GetSection` | Get all key-value pairs in section | `GetSectionAsync` |
-| `FindKeyInAllSections` | Search key across all sections | `FindKeyInAllSectionsAsync` |
+| `GetAllSections` | List all sections | - |
+| `GetAllKeys` | List section keys | - |
+| `GetSection` | Get all key-value pairs in section | - |
+| `FindKeyInAllSections` | Search key across all sections | - |
 | `ClearSection` | Remove all keys from section | `ClearSectionAsync` |
 | `RenameKey` | Rename key in section | `RenameKeyAsync` |
 | `RenameSection` | Rename entire section | `RenameSectionAsync` |
-| `Search` | Search keys/values by pattern | `SearchAsync` |
-| `SectionExists` | Check if section exists | `SectionExistsAsync` |
-| `KeyExists` | Check if key exists in section | `KeyExistsAsync` |
+| `Search` | Search keys/values by pattern | - |
+| `SectionExists` | Check if section exists | - |
+| `KeyExists` | Check if key exists in section | - |
 | `SaveFile` | Saving data to a file | `SaveFileAsync` |
-| `ReloadFromFile` | Reloading data from a file | `ReloadFromFileAsync` |
-| `DeleteFile` | Deleting a file from disk | `DeleteFileAsync` |
-| `DeleteFileWithData` | Deleting a file and clearing data | `DeleteFileWithDataAsync` |
-| `GetEncryptionPassword` | Getting the encryption password (or status) | `GetEncryptionPasswordAsync` |
+| `ReloadFromFile` | Reloading data from a file | - |
+| `DeleteFile` | Deleting a file from disk | - |
+| `DeleteFileWithData` | Deleting a file and clearing data | - |
+| `GetEncryptionPassword` | Getting the encryption password (or status) | - |
 
 | Option | Description | Default |
 |--------|-------------|---------|
 | `AutoSave` | Automatically saves changes to disk after modifications | `true` |
-| `UseAutoSaveInterval` | When AutoSave is enabled, determines if saves occur at regular intervals instead of after every single modification | `true` |
-| `AutoSaveInterval` | Number of operations between automatic saves when both AutoSave and UseAutoSaveInterval are enabled. | `5` |
+| `UseAutoSaveInterval` | When AutoSave is enabled, determines if saves occur at regular intervals instead of after every single modification | `false` |
+| `AutoSaveInterval` | Number of operations between automatic saves when both AutoSave and UseAutoSaveInterval are enabled. | `3` |
 | `AutoBackup` | Creates backup files (.backup) during save operations for safety | `true` |
 | `AutoAdd` | Automatically creates missing sections/keys with default values when reading via `GetValue<T>` | `true` |
 | `UseChecksum` | Calculates and verifies checksums during load/save operations to detect corruption or tampering | `true` |
