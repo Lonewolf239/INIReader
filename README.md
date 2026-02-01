@@ -9,7 +9,7 @@ dotnet add package NeoIni
 ```
 
 **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)  
-**Version:** `1.5.4.3` | **.NET 8+**
+**Version:** `1.5.4.4` | **.NET 8+**
 
 ## Features
 

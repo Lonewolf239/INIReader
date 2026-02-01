@@ -12,7 +12,7 @@ namespace NeoIni;
 ///
 /// <b>Target Framework: .NET 8+</b>
 ///
-/// <b>Version: 1.5.4.3</b>
+/// <b>Version: 1.5.4.4</b>
 ///
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
@@ -110,6 +110,7 @@ public class NeoIniReader : IDisposable
             throw new ArgumentException("Encryption password cannot be null or empty.", nameof(encryptionPassword));
         EncryptionKey = NeoIniEncryptionProvider.GetEncryptionKey(encryptionPassword);
         AutoEncryption = true;
+        FileProvider = new(FilePath, EncryptionKey);
         Data = FileProvider.GetData(UseChecksum);
     }
 

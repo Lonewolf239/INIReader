@@ -6,6 +6,6 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="NeoIni" Version="1.5.4.3" />
+		<PackageReference Include="NeoIni" Version="1.5.4.4" />
 	</ItemGroup>
 </Project>
