@@ -18,6 +18,8 @@ internal sealed class NeoIniParser
         var content = new StringBuilder();
         lock (sync)
         {
+            content.Append("; Do not modify this file! This will result in data loss!\n");
+            content.Append("; (Data will be downloaded from the backup)\n");
             foreach (var section in data)
             {
                 content.Append($"[{section.Key}]\n");

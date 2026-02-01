@@ -12,7 +12,7 @@ namespace NeoIni;
 /// <br/>
 /// <b>Target Framework: .NET 6+</b>
 /// <br/>
-/// <b>Version: 1.5.6.2</b>
+/// <b>Version: 1.5.6.3</b>
 /// <br/>
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
@@ -190,7 +190,7 @@ public class NeoIniReader : IDisposable
     public void Dispose()
     {
         SaveFile();
-        Data?.Clear();
+        lock (Lock) Data?.Clear();
         OnDataCleared?.Invoke();
     }
 
@@ -530,7 +530,7 @@ public class NeoIniReader : IDisposable
     /// Asynchronously clears all keys from the specified section.
     /// </summary>
     /// <param name="section">The name of the section to clear.</param>
-    public async void ClearSectionAsync(string section)
+    public async Task ClearSectionAsync(string section)
     {
         if (!SectionExists(section)) return;
         lock (Lock) Data[section].Clear();
@@ -570,7 +570,7 @@ public class NeoIniReader : IDisposable
     /// <param name="section">The section containing the key to rename.</param>
     /// <param name="oldKey">The current name of the key.</param>
     /// <param name="newKey">The new name for the key.</param>
-    public async void RenameKeyAsync(string section, string oldKey, string newKey)
+    public async Task RenameKeyAsync(string section, string oldKey, string newKey)
     {
         if (!KeyExists(section, oldKey)) return;
         lock (Lock)
@@ -612,7 +612,7 @@ public class NeoIniReader : IDisposable
     /// </summary>
     /// <param name="oldSection">The current name of the section.</param>
     /// <param name="newSection">The new name for the section.</param>
-    public async void RenameSectionAsync(string oldSection, string newSection)
+    public async Task RenameSectionAsync(string oldSection, string newSection)
     {
         if (!SectionExists(oldSection) || SectionExists(newSection)) return;
         lock (Lock)
