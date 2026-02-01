@@ -7,13 +7,13 @@ namespace NeoIni;
 
 /// <summary>
 /// A class for working with INI files.
-///
+/// <br/>
 /// Developer: <a href="https://github.com/Lonewolf239">Lonewolf239</a>
-///
-/// <b>Target Framework: .NET 8+</b>
-///
-/// <b>Version: 1.5.4.4</b>
-///
+/// <br/>
+/// <b>Target Framework: .NET 6+</b>
+/// <br/>
+/// <b>Version: 1.5.5</b>
+/// <br/>
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
 public class NeoIniReader : IDisposable
@@ -359,7 +359,7 @@ public class NeoIniReader : IDisposable
     /// <returns>An array of strings containing the names of all keys in the section, or an empty array if the section does not exist.</returns>
     public string[] GetAllKeys(string section)
     {
-        if (!SectionExists(section)) return [];
+        if (!SectionExists(section)) return new string[1] { "" };
         lock (Lock) return Data[section].Keys.ToArray();
     }
 
@@ -369,6 +369,176 @@ public class NeoIniReader : IDisposable
     /// <param name="section">Name of the section to receive keys from.</param>
     /// <returns>A task whose result contains an array of strings containing the names of all keys in the section.</returns>
     public async Task<string[]> GetAllKeysAsync(string section) => await Task.Run(() => GetAllKeys(section));
+
+    /// <summary>
+    /// Returns a dictionary containing all key-value pairs from the specified section.
+    /// </summary>
+    /// <param name="section">The name of the section to retrieve.</param>
+    /// <returns>A read-only copy of the section's key-value pairs, or an empty dictionary if the section does not exist.</returns>
+    public Dictionary<string, string> GetSection(string section)
+    {
+        if (!SectionExists(section)) return new Dictionary<string, string>();
+        lock (Lock) return new Dictionary<string, string>(Data[section]);
+    }
+
+    /// <summary>
+    /// Asynchronously returns a dictionary containing all key-value pairs from the specified section.
+    /// </summary>
+    /// <param name="section">The name of the section to retrieve.</param>
+    /// <returns>A task whose result contains a read-only copy of the section's key-value pairs.</returns>
+    public async Task<Dictionary<string, string>> GetSectionAsync(string section) => await Task.Run(() => GetSection(section));
+
+    /// <summary>
+    /// Searches for a specific key across all sections and returns a dictionary mapping section names to their corresponding values.
+    /// </summary>
+    /// <param name="key">The key name to search for across all sections.</param>
+    /// <returns>A dictionary where keys are section names and values are the corresponding key values found, or an empty dictionary if no matches are found.</returns>
+    public Dictionary<string, string> FindKeyInAllSections(string key)
+    {
+        var results = new Dictionary<string, string>();
+        lock (Lock)
+        {
+            foreach (var section in Data)
+            {
+                if (section.Value.TryGetValue(key, out var value))
+                    results[section.Key] = value;
+            }
+        }
+        return results;
+    }
+
+    /// <summary>
+    /// Asynchronously searches for a specific key across all sections.
+    /// </summary>
+    /// <param name="key">The key name to search for across all sections.</param>
+    /// <returns>A task whose result contains a dictionary mapping section names to their corresponding key values.</returns>
+    public async Task<Dictionary<string, string>> FindKeyInAllSectionsAsync(string key) => await Task.Run(() => FindKeyInAllSections(key));
+
+    /// <summary>
+    /// Clears all keys from the specified section while keeping the section itself intact.
+    /// </summary>
+    /// <param name="section">The name of the section to clear.</param>
+    public void ClearSection(string section)
+    {
+        if (!SectionExists(section)) return;
+        lock (Lock) Data[section].Clear();
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            SaveFile();
+    }
+
+    /// <summary>
+    /// Asynchronously clears all keys from the specified section.
+    /// </summary>
+    /// <param name="section">The name of the section to clear.</param>
+    public async void ClearSectionAsync(string section)
+    {
+        if (!SectionExists(section)) return;
+        lock (Lock) Data[section].Clear();
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            await SaveFileAsync();
+    }
+
+    /// <summary>
+    /// Renames a key within a specific section by copying its value to a new key name and removing the old one.
+    /// </summary>
+    /// <param name="section">The section containing the key to rename.</param>
+    /// <param name="oldKey">The current name of the key.</param>
+    /// <param name="newKey">The new name for the key.</param>
+    public void RenameKey(string section, string oldKey, string newKey)
+    {
+        if (!KeyExists(section, oldKey)) return;
+        lock (Lock)
+        {
+            Data[section][newKey] = Data[section][oldKey];
+            Data[section].Remove(oldKey);
+        }
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            SaveFile();
+    }
+
+    /// <summary>
+    /// Asynchronously renames a key within a specific section.
+    /// </summary>
+    /// <param name="section">The section containing the key to rename.</param>
+    /// <param name="oldKey">The current name of the key.</param>
+    /// <param name="newKey">The new name for the key.</param>
+    public async void RenameKeyAsync(string section, string oldKey, string newKey)
+    {
+        if (!KeyExists(section, oldKey)) return;
+        lock (Lock)
+        {
+            Data[section][newKey] = Data[section][oldKey];
+            Data[section].Remove(oldKey);
+        }
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            await SaveFileAsync();
+    }
+
+    /// <summary>
+    /// Renames an entire section by moving all its contents to a new section name and removing the old one.
+    /// </summary>
+    /// <param name="oldSection">The current name of the section.</param>
+    /// <param name="newSection">The new name for the section.</param>
+    public void RenameSection(string oldSection, string newSection)
+    {
+        if (!SectionExists(oldSection) || SectionExists(newSection)) return;
+        lock (Lock)
+        {
+            Data[newSection] = Data[oldSection];
+            Data.Remove(oldSection);
+        }
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            SaveFile();
+    }
+
+    /// <summary>
+    /// Asynchronously renames an entire section.
+    /// </summary>
+    /// <param name="oldSection">The current name of the section.</param>
+    /// <param name="newSection">The new name for the section.</param>
+    public async void RenameSectionAsync(string oldSection, string newSection)
+    {
+        if (!SectionExists(oldSection) || SectionExists(newSection)) return;
+        lock (Lock)
+        {
+            Data[newSection] = Data[oldSection];
+            Data.Remove(oldSection);
+        }
+        if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+            await SaveFileAsync();
+    }
+
+    /// <summary>
+    /// Searches for keys or values matching a pattern across all sections and returns matching entries.
+    /// </summary>
+    /// <param name="pattern">The search pattern to match against keys and values (case-insensitive).</param>
+    /// <returns>A list of tuples containing (section, key, value) for all matches found.</returns>
+    public List<(string section, string key, string value)> Search(string pattern)
+    {
+        if (string.IsNullOrEmpty(pattern)) return new List<(string, string, string)>();
+        var results = new List<(string, string, string)>();
+        var searchPattern = pattern.ToLowerInvariant();
+        lock (Lock)
+        {
+            foreach (var section in Data)
+            {
+                foreach (var kvp in section.Value)
+                {
+                    if ((kvp.Key?.ToLowerInvariant().Contains(searchPattern) == true) ||
+                            (kvp.Value?.ToLowerInvariant().Contains(searchPattern) == true))
+                        results.Add((section.Key, kvp.Key, kvp.Value));
+                }
+            }
+        }
+        return results;
+    }
+
+    /// <summary>
+    /// Asynchronously searches for keys or values matching a pattern across all sections.
+    /// </summary>
+    /// <param name="pattern">The search pattern to match against keys and values (case-insensitive).</param>
+    /// <returns>A task whose result contains a list of matching entries as (section, key, value) tuples.</returns>
+    public async Task<List<(string section, string key, string value)>> SearchAsync(string pattern) => await Task.Run(() => Search(pattern));
 
     /// <summary>
     /// Reloads data from the INI file, updating the internal data structure.

@@ -1,23 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+		<TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
 		<PackageId>NeoIni</PackageId>
-		<Version>1.5.4.4</Version>
+		<Version>1.5.5</Version>
 		<Authors>Lonewolf239</Authors>
-		<Description>Modern INI reader/writer for .NET 8+. AES encryption, thread-safe.</Description>
-		<PackageTags>ini;config;encryption;ini-parser;configuration;secure-config;aes-ini;.NET8;.NET9;.NET10</PackageTags>
+		<Description>Modern INI reader/writer for .NET 6+. AES encryption, thread-safe.</Description>
+		<PackageTags>ini;config;encryption;ini-parser;configuration;secure-config;aes-ini;.NET6;.NET7;.NET8;.NET9;.NET10</PackageTags>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryUrl>https://github.com/Lonewolf239/NeoIni</RepositoryUrl>
-		<!-- <PackageIcon>icon.png</PackageIcon> -->
+		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<Copyright>Copyright © Lonewolf239 2026</Copyright>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<EnablePackageValidation>true</EnablePackageValidation>
 	</PropertyGroup>
 	<ItemGroup>
-		<!-- <None Include="icon.png" Pack="true" PackagePath="\" /> -->
+		<None Include="icon.png" Pack="true" PackagePath="\" />
 		<None Include="README.md" Pack="true" PackagePath="\" />
 		<None Include="LICENSE" Pack="true" PackagePath="\" />
 		<Compile Remove="NeoIniDemo\**" />

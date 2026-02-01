@@ -9,7 +9,7 @@ dotnet add package NeoIni
 ```
 
 **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)  
-**Version:** `1.5.4.4` | **.NET 8+**
+**Version:** `1.5.5` | **.NET 6+**
 
 ## Features
 
@@ -25,7 +25,7 @@ dotnet add package NeoIni
 
 ## Target Framework
 
-.NET 8+
+.NET 6+
 
 ## Usage
 

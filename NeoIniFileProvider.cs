@@ -62,9 +62,9 @@ internal sealed class NeoIniFileProvider
         return ReadFile(BackupFilePath, useChecksum, true);
     }
 
-    private string[] ReadFile(bool useChecksum) => ReadFile(FilePath, useChecksum);
+    private string[] ReadFile(bool useChecksum) => ReadFile(FilePath, useChecksum, false);
 
-    private string[] ReadFile(string path, bool useChecksum, bool isBackup = false)
+    private string[] ReadFile(string path, bool useChecksum, bool isBackup)
     {
         if (!File.Exists(path))
         {

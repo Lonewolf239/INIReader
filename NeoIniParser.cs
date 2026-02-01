@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 namespace NeoIni;
@@ -9,7 +10,7 @@ internal sealed class NeoIniParser
     internal static string GetStringRaw(object sync, Dictionary<string, Dictionary<string, string>> data, string section, string keyName)
     {
         lock (sync)
-            return data.TryGetValue(section, out var sec) && sec.TryGetValue(keyName, out var val) ? val : null;
+            return data.TryGetValue(section, out var sec) && sec.TryGetValue(keyName, out var val) ? val.Trim() : null;
     }
 
     internal static string GetContent(object sync, Dictionary<string, Dictionary<string, string>> data)
@@ -31,14 +32,17 @@ internal sealed class NeoIniParser
     internal static T TryParseValue<T>(string value, T defaultValue)
     {
         if (string.IsNullOrWhiteSpace(value)) return defaultValue;
-        if (typeof(T) == typeof(bool))
-            return bool.TryParse(value, out bool parsed) ? (T)(object)parsed : defaultValue;
+        Type targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
         try
         {
-            if (value == null || string.IsNullOrWhiteSpace(value))
-                return defaultValue;
-            object parsed = Convert.ChangeType(value.Trim(), typeof(T));
-            return (T)parsed;
+            if (targetType.IsEnum)
+                return Enum.TryParse(targetType, value, true, out object enumResult) ? (T)enumResult : defaultValue;
+            if (targetType == typeof(bool))
+                return bool.TryParse(value, out bool boolResult) ? (T)(object)boolResult : defaultValue;
+            if (targetType == typeof(DateTime))
+                return DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime dtResult) ?
+                     (T)(object)dtResult : defaultValue;
+            return (T)Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
         }
         catch { return defaultValue; }
     }
