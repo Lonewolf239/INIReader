@@ -1,6 +1,6 @@
 # NeoIni
 
-NeoIni is a C# class for working with INI files. It provides secure, thread-safe methods for creating, reading, and modifying INI files with built-in checksum validation and optional AES encryption.
+NeoIni is a full-featured C# library for INI file management. It provides secure, thread-safe operations for creating, reading, and modifying files with built-in checksum validation and optional AES encryption.
 
 ## Installation
 
@@ -9,7 +9,8 @@ dotnet add package NeoIni
 ```
 
 **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)  
-**Version:** `1.5.5` | **.NET 6+**
+**Version:** `1.5.6` | **.NET 6+**
+**Developer:** [Lonewolf239](https://github.com/Lonewolf239)
 
 ## Features
 
@@ -23,6 +24,13 @@ dotnet add package NeoIni
 - Full async method support for all operations
 - Automatic directory creation and file initialization
 
+## Security Features
+
+- **Checksum**: SHA256 validation detects tampering or corruption
+- **AES-256**: User-environment derived encryption key with IV
+- **Thread-safe**: All operations protected by `lock`
+- Password generated from `Environment.UserName`, `MachineName`, `UserDomainName`
+
 ## Target Framework
 
 .NET 6+
@@ -32,8 +40,9 @@ dotnet add package NeoIni
 ### Creating a NeoIni Instance
 
 ```cs
-NeoIniReader reader = new("config.ini");                   // Standard usage
-NeoIniReader encryptedReader = new("config.ini", true);    // With auto-encryption
+NeoIniReader reader = new("config.ini");                                          // Standard usage
+NeoIniReader encryptedReader = new("config.ini", true);                           // With auto-encryption
+NeoIniReader encryptedCustomReader = new("config.ini", "MySecretPas123");         // With user password
 ```
 
 ### Reading Values
@@ -53,15 +62,6 @@ reader.SetKey("Section1", "Number", 42);
 reader.SetKey("Section1", "Enabled", true);
 ```
 
-## Configuration Options
-
-- `AutoSave = true`: Automatically saves changes to disk after modifications.
-- `UseAutoSaveInterval = true`: When AutoSave is enabled, determines if saves occur at regular intervals instead of after every single modification.
-- `AutoSaveInterval = 5`: Number of operations between automatic saves when both AutoSave and UseAutoSaveInterval are enabled. Set to 0 to disable interval saving.
-- `AutoBackup = true`: Creates backup files (.backup) during save operations for safety.
-- `AutoAdd = true`: Automatically creates missing sections/keys with default values when reading via `GetValue<T>`.
-- `UseChecksum = true`: Calculates and verifies checksums during load/save operations to detect corruption or tampering.
-
 
 ## Example
 
@@ -77,13 +77,6 @@ int port = reader.GetValue<int>("Database", "Port", 3306);
 
 Console.WriteLine($"DB: {host}:{port}");
 ```
-
-## Security Features
-
-- **Checksum**: SHA256 validation detects tampering or corruption
-- **AES-256**: User-environment derived encryption key with IV
-- **Thread-safe**: All operations protected by `lock`
-- Password generated from `Environment.UserName`, `MachineName`, `UserDomainName`
 
 ## Section/Key Management
 
@@ -115,7 +108,7 @@ reader.DeleteFileWithData();          // Delete file + clear data
 ## API Reference
 
 | Method | Description | Async Version |
-|--------|-------------|---------------|
+|--------|-----------  |---------------|
 | `GetValue<T>` | Read typed value with default fallback | `GetValueAsync<T>` |
 | `SetKey<T>` | Set/create key-value | `SetKeyAsync<T>` |
 | `AddSection` | Create section if missing | `AddSectionAsync` |
@@ -124,11 +117,43 @@ reader.DeleteFileWithData();          // Delete file + clear data
 | `RemoveSection` | Delete entire section | `RemoveSectionAsync` |
 | `GetAllSections` | List all sections | `GetAllSectionsAsync` |
 | `GetAllKeys` | List section keys | `GetAllKeysAsync` |
+| `GetSection` | Get all key-value pairs in section | `GetSectionAsync` |
+| `FindKeyInAllSections` | Search key across all sections | `FindKeyInAllSectionsAsync` |
+| `ClearSection` | Remove all keys from section | `ClearSectionAsync` |
+| `RenameKey` | Rename key in section | `RenameKeyAsync` |
+| `RenameSection` | Rename entire section | `RenameSectionAsync` |
+| `Search` | Search keys/values by pattern | `SearchAsync` |
+| `SectionExists` | Check if section exists | `SectionExistsAsync` |
+| `KeyExists` | Check if key exists in section | `KeyExistsAsync` |
+| `SaveFile` | Saving data to a file | `SaveFileAsync` |
+| `ReloadFromFile` | Reloading data from a file | `ReloadFromFileAsync` |
+| `DeleteFile` | Deleting a file from disk | `DeleteFileAsync` |
+| `DeleteFileWithData` | Deleting a file and clearing data | `DeleteFileWithDataAsync` |
+| `GetEncryptionPassword` | Getting the encryption password (or status) | `GetEncryptionPasswordAsync` |
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `AutoSave` | Automatically saves changes to disk after modifications | `true` |
+| `UseAutoSaveInterval` | When AutoSave is enabled, determines if saves occur at regular intervals instead of after every single modification | `true` |
+| `AutoSaveInterval` | Number of operations between automatic saves when both AutoSave and UseAutoSaveInterval are enabled. | `5` |
+| `AutoBackup` | Creates backup files (.backup) during save operations for safety | `true` |
+| `AutoAdd` | Automatically creates missing sections/keys with default values when reading via `GetValue<T>` | `true` |
+| `UseChecksum` | Calculates and verifies checksums during load/save operations to detect corruption or tampering | `true` |
+
+| Action | Description |
+|--------|-------------|
+| `OnSave` | Called before saving a file to disk |
+| `OnLoad` | Called after successfully loading data from a file or reloading |
+| `OnKeyChanged` | Called when the value of an existing key in a section changes |
+| `OnKeyAdded` | Called when a new key is added to a section |
+| `OnKeyRemoved` | Called when a key is removed from a section |
+| `OnSectionChanged` | Called whenever a section changes (keys are changed/added/removed) |
+| `OnSectionAdded` | Called when a new section is added |
+| `OnSectionRemoved` | Called when a section is deleted |
+| `OnDataCleared` | Called when the data is completely cleared |
+| `OnAutoSave` | Called before automatic saving |
+| `OnError` | Called when errors occur (parsing, saving, reading a file, etc.) |
 
 ## Philosophy
 
 **Black Box Design**: Interact only through public API - internals abstracted
-
-## Developer
-
-[Lonewolf239](https://github.com/Lonewolf239)

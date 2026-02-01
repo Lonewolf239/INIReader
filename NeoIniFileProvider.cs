@@ -15,14 +15,20 @@ internal sealed class NeoIniFileProvider
     private string BackupFilePath => FilePath + ".backup";
     private readonly byte[] EncryptionKey;
     private readonly bool AutoEncryption = false;
+    private Action<Exception> OnError;
 
-    internal NeoIniFileProvider(string filePath) => FilePath = filePath;
+    internal NeoIniFileProvider(string filePath, Action<Exception> onError)
+    {
+        FilePath = filePath;
+        OnError = onError;
+    }
 
-    internal NeoIniFileProvider(string filePath, byte[] encryptionKey)
+    internal NeoIniFileProvider(string filePath, byte[] encryptionKey, Action<Exception> onError)
     {
         FilePath = filePath;
         EncryptionKey = encryptionKey;
         AutoEncryption = true;
+        OnError = onError;
     }
 
     internal Dictionary<string, Dictionary<string, string>> GetData(bool useChecksum)
@@ -112,9 +118,10 @@ internal sealed class NeoIniFileProvider
             if (data != null) return data;
             throw new InvalidOperationException("Failed to decrypt configuration file. Invalid encryption key or corrupted data.", ex);
         }
-        catch
+        catch (Exception ex)
         {
             if (isBackup) return null;
+            OnError?.Invoke(ex);
             return CheckBackup(useChecksum);
         }
     }
@@ -123,56 +130,64 @@ internal sealed class NeoIniFileProvider
     {
         byte[] plaintextBytes = Encoding.UTF8.GetBytes(content);
         byte[] dataWithChecksum;
-        if (!AutoEncryption)
+        try
         {
-            dataWithChecksum = AddChecksum(plaintextBytes, useChecksum);
-            File.WriteAllBytes(TempFilePath, dataWithChecksum);
+            if (!AutoEncryption)
+            {
+                dataWithChecksum = AddChecksum(plaintextBytes, useChecksum);
+                File.WriteAllBytes(TempFilePath, dataWithChecksum);
+            }
+            else
+            {
+                using var aes = Aes.Create();
+                aes.Key = EncryptionKey;
+                aes.GenerateIV();
+                using var encryptor = aes.CreateEncryptor();
+                using var ms = new MemoryStream();
+                ms.Write(aes.IV, 0, aes.IV.Length);
+                using var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write);
+                cs.Write(plaintextBytes, 0, plaintextBytes.Length);
+                cs.FlushFinalBlock();
+                byte[] encryptedData = ms.ToArray();
+                dataWithChecksum = AddChecksum(encryptedData, useChecksum);
+                File.WriteAllBytes(TempFilePath, dataWithChecksum);
+            }
+            if (useBackup) File.Replace(TempFilePath, FilePath, BackupFilePath);
+            else File.Replace(TempFilePath, FilePath, null);
         }
-        else
-        {
-            using var aes = Aes.Create();
-            aes.Key = EncryptionKey;
-            aes.GenerateIV();
-            using var encryptor = aes.CreateEncryptor();
-            using var ms = new MemoryStream();
-            ms.Write(aes.IV, 0, aes.IV.Length);
-            using var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write);
-            cs.Write(plaintextBytes, 0, plaintextBytes.Length);
-            cs.FlushFinalBlock();
-            byte[] encryptedData = ms.ToArray();
-            dataWithChecksum = AddChecksum(encryptedData, useChecksum);
-            File.WriteAllBytes(TempFilePath, dataWithChecksum);
-        }
-        if (useBackup) File.Replace(TempFilePath, FilePath, BackupFilePath);
-        else File.Replace(TempFilePath, FilePath, null);
+        catch (Exception ex) { OnError?.Invoke(ex); }
     }
 
     internal async Task SaveFileAsync(string content, bool useChecksum, bool useBackup)
     {
         byte[] plaintextBytes = Encoding.UTF8.GetBytes(content);
         byte[] dataWithChecksum;
-        if (!AutoEncryption)
+        try
         {
-            dataWithChecksum = AddChecksum(plaintextBytes, useChecksum);
-            await File.WriteAllBytesAsync(TempFilePath, dataWithChecksum).ConfigureAwait(false);
+            if (!AutoEncryption)
+            {
+                dataWithChecksum = AddChecksum(plaintextBytes, useChecksum);
+                await File.WriteAllBytesAsync(TempFilePath, dataWithChecksum).ConfigureAwait(false);
+            }
+            else
+            {
+                using var aes = Aes.Create();
+                aes.Key = EncryptionKey;
+                aes.GenerateIV();
+                using var encryptor = aes.CreateEncryptor();
+                await using var ms = new MemoryStream();
+                await ms.WriteAsync(aes.IV, 0, aes.IV.Length).ConfigureAwait(false);
+                await using var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write);
+                await cs.WriteAsync(plaintextBytes, 0, plaintextBytes.Length).ConfigureAwait(false);
+                await cs.FlushFinalBlockAsync().ConfigureAwait(false);
+                byte[] encryptedData = ms.ToArray();
+                dataWithChecksum = AddChecksum(encryptedData, useChecksum);
+                await File.WriteAllBytesAsync(TempFilePath, dataWithChecksum).ConfigureAwait(false);
+            }
+            if (useBackup) File.Replace(TempFilePath, FilePath, BackupFilePath);
+            else File.Replace(TempFilePath, FilePath, null);
         }
-        else
-        {
-            using var aes = Aes.Create();
-            aes.Key = EncryptionKey;
-            aes.GenerateIV();
-            using var encryptor = aes.CreateEncryptor();
-            await using var ms = new MemoryStream();
-            await ms.WriteAsync(aes.IV, 0, aes.IV.Length).ConfigureAwait(false);
-            await using var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write);
-            await cs.WriteAsync(plaintextBytes, 0, plaintextBytes.Length).ConfigureAwait(false);
-            await cs.FlushFinalBlockAsync().ConfigureAwait(false);
-            byte[] encryptedData = ms.ToArray();
-            dataWithChecksum = AddChecksum(encryptedData, useChecksum);
-            await File.WriteAllBytesAsync(TempFilePath, dataWithChecksum).ConfigureAwait(false);
-        }
-        if (useBackup) File.Replace(TempFilePath, FilePath, BackupFilePath);
-        else File.Replace(TempFilePath, FilePath, null);
+        catch (Exception ex) { OnError?.Invoke(ex); }
     }
 
     private bool ValidateChecksum(byte[] data, bool useChecksum)

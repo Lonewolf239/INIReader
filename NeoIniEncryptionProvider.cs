@@ -6,7 +6,6 @@ namespace NeoIni;
 
 internal sealed class NeoIniEncryptionProvider
 {
-
     private static string GeneratePasswordFromUserId(int length = 16)
     {
         string userId = Environment.UserName ?? Environment.GetEnvironmentVariable("USER") ?? "unknown";

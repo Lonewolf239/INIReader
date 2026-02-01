@@ -29,7 +29,7 @@ internal sealed class NeoIniParser
         return content.ToString();
     }
 
-    internal static T TryParseValue<T>(string value, T defaultValue)
+    internal static T TryParseValue<T>(string value, T defaultValue, Action<Exception> onError)
     {
         if (string.IsNullOrWhiteSpace(value)) return defaultValue;
         Type targetType = Nullable.GetUnderlyingType(typeof(T)) ?? typeof(T);
@@ -44,7 +44,11 @@ internal sealed class NeoIniParser
                      (T)(object)dtResult : defaultValue;
             return (T)Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
         }
-        catch { return defaultValue; }
+        catch (Exception ex)
+        {
+            onError?.Invoke(ex);
+            return defaultValue;
+        }
     }
 
     internal static bool TryMatchKey(ReadOnlySpan<char> line, out string key, out string value)

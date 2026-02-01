@@ -12,7 +12,7 @@ namespace NeoIni;
 /// <br/>
 /// <b>Target Framework: .NET 6+</b>
 /// <br/>
-/// <b>Version: 1.5.5</b>
+/// <b>Version: 1.5.6</b>
 /// <br/>
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
@@ -70,7 +70,75 @@ public class NeoIniReader : IDisposable
     /// </summary>
     public bool UseChecksum = true;
 
+    /// <summary>
+    /// Called before saving a file to disk.
+    /// </summary>
+    public Action OnSave;
+
+    /// <summary>
+    /// Called after successfully loading data from a file or reloading.
+    /// </summary>
+    public Action OnLoad;
+
+    /// <summary>
+    /// Called when the value of an existing key in a section changes.
+    /// </summary>
+    /// <param>Name of the section where the change occurred.</param>
+    /// <param>Name of the changed key.</param>
+    /// <param>New value of the key.</param>
+    public Action<string, string, string> OnKeyChanged;
+
+    /// <summary>
+    /// Called when a new key is added to a section.
+    /// </summary>
+    /// <param>Name of the section to which the key was added.</param>
+    /// <param>Name of the added key.</param>
+    /// <param>Value of the added key.</param>
+    public Action<string, string, string> OnKeyAdded;
+
+    /// <summary>
+    /// Called when a key is removed from a section.
+    /// </summary>
+    /// <param>The name of the section from which the key was removed.</param>
+    /// <param>The name of the removed key.</param>
+    public Action<string, string> OnKeyRemoved;
+
+    /// <summary>
+    /// Called whenever a section changes (keys are changed/added/removed).
+    /// </summary>
+    /// <param>Name of the modified section.</param>
+    public Action<string> OnSectionChanged;
+
+    /// <summary>
+    /// Called when a new section is added.
+    /// </summary>
+    /// <param>The name of the added section.</param>
+    public Action<string> OnSectionAdded;
+
+    /// <summary>
+    /// Called when a section is deleted.
+    /// </summary>
+    /// <param>Name of the deleted section.</param>
+    public Action<string> OnSectionRemoved;
+
+    /// <summary>
+    /// Called when the data is completely cleared.
+    /// </summary>
+    public Action OnDataCleared;
+
+    /// <summary>
+    /// Called before automatic saving.
+    /// </summary>
+    public Action OnAutoSave;
+
+    /// <summary>
+    /// Called when errors occur (parsing, saving, reading a file, etc.).
+    /// </summary>
+    /// <param>An exception containing information about the error.</param>
+    public Action<Exception> OnError;
+
     private readonly bool AutoEncryption = false;
+    private readonly bool CustomEncryptionPassword = false;
     private readonly byte[] EncryptionKey;
     private readonly object Lock = new();
 
@@ -92,10 +160,11 @@ public class NeoIniReader : IDisposable
         {
             EncryptionKey = NeoIniEncryptionProvider.GetEncryptionKey();
             AutoEncryption = true;
-            FileProvider = new(FilePath, EncryptionKey);
+            FileProvider = new(FilePath, EncryptionKey, OnError);
         }
-        else FileProvider = new(FilePath);
+        else FileProvider = new(FilePath, OnError);
         Data = FileProvider.GetData(UseChecksum);
+        OnLoad?.Invoke();
     }
 
     /// <summary>
@@ -109,9 +178,10 @@ public class NeoIniReader : IDisposable
         if (string.IsNullOrEmpty(encryptionPassword))
             throw new ArgumentException("Encryption password cannot be null or empty.", nameof(encryptionPassword));
         EncryptionKey = NeoIniEncryptionProvider.GetEncryptionKey(encryptionPassword);
-        AutoEncryption = true;
-        FileProvider = new(FilePath, EncryptionKey);
+        AutoEncryption = CustomEncryptionPassword = true;
+        FileProvider = new(FilePath, EncryptionKey, OnError);
         Data = FileProvider.GetData(UseChecksum);
+        OnLoad?.Invoke();
     }
 
     /// <summary>
@@ -121,17 +191,26 @@ public class NeoIniReader : IDisposable
     {
         SaveFile();
         Data?.Clear();
+        OnDataCleared?.Invoke();
     }
 
     /// <summary>
     /// Saves the current data to an INI file with checksums and encryption applied, if enabled.
     /// </summary>
-    public void SaveFile() => FileProvider.SaveFile(NeoIniParser.GetContent(Lock, Data), UseChecksum, AutoBackup);
+    public void SaveFile()
+    {
+        OnSave?.Invoke();
+        FileProvider.SaveFile(NeoIniParser.GetContent(Lock, Data), UseChecksum, AutoBackup);
+    }
 
     /// <summary>
     /// Asynchronously saves the current data to the INI file.
     /// </summary>
-    public async Task SaveFileAsync() => await FileProvider.SaveFileAsync(NeoIniParser.GetContent(Lock, Data), UseChecksum, AutoBackup);
+    public async Task SaveFileAsync()
+    {
+        OnSave?.Invoke();
+        await FileProvider.SaveFileAsync(NeoIniParser.GetContent(Lock, Data), UseChecksum, AutoBackup);
+    }
 
     /// <summary>
     /// Determines whether a specific section exists in the loaded data.
@@ -177,8 +256,12 @@ public class NeoIniReader : IDisposable
     {
         if (SectionExists(section)) return;
         lock (Lock) Data[section] = new Dictionary<string, string>();
+        OnSectionAdded?.Invoke(section);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             SaveFile();
+        }
     }
 
     /// <summary>
@@ -189,8 +272,12 @@ public class NeoIniReader : IDisposable
     {
         if (SectionExists(section)) return;
         lock (Lock) Data[section] = new Dictionary<string, string>();
+        OnSectionAdded?.Invoke(section);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             await SaveFileAsync();
+        }
     }
 
     /// <summary>
@@ -204,9 +291,14 @@ public class NeoIniReader : IDisposable
     {
         if (!SectionExists(section)) AddSection(section);
         if (KeyExists(section, key)) return;
-        lock (Lock) Data[section][key] = value.ToString().Trim();
+        string valueString = value.ToString().Trim();
+        lock (Lock) Data[section][key] = valueString;
+        OnKeyAdded?.Invoke(section, key, valueString);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             SaveFile();
+        }
     }
 
     /// <summary>
@@ -220,9 +312,14 @@ public class NeoIniReader : IDisposable
     {
         if (!SectionExists(section)) AddSection(section);
         if (KeyExists(section, key)) return;
-        lock (Lock) Data[section][key] = value.ToString().Trim();
+        string valueString = value.ToString().Trim();
+        lock (Lock) Data[section][key] = valueString;
+        OnKeyAdded?.Invoke(section, key, valueString);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             await SaveFileAsync();
+        }
     }
 
     /// <summary>
@@ -244,7 +341,7 @@ public class NeoIniReader : IDisposable
                 if (AutoAdd) AddKeyInSection(section, key, defaultValue?.ToString() ?? "");
                 return defaultValue;
             }
-            return NeoIniParser.TryParseValue<T>(stringValue, defaultValue);
+            return NeoIniParser.TryParseValue<T>(stringValue, defaultValue, OnError);
         }
         catch { return defaultValue; }
     }
@@ -270,9 +367,16 @@ public class NeoIniReader : IDisposable
     public void SetKey<T>(string section, string key, T value)
     {
         if (!SectionExists(section)) AddSection(section);
-        lock (Lock) Data[section][key] = value.ToString().Trim();
+        bool keyExists = KeyExists(section, key);
+        string valueString = value.ToString().Trim();
+        lock (Lock) Data[section][key] = valueString;
+        if (keyExists) OnKeyChanged?.Invoke(section, key, valueString);
+        else OnKeyAdded?.Invoke(section, key, valueString);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             SaveFile();
+        }
     }
 
     /// <summary>
@@ -285,9 +389,16 @@ public class NeoIniReader : IDisposable
     public async Task SetKeyAsync<T>(string section, string key, T value)
     {
         if (!SectionExists(section)) AddSection(section);
-        lock (Lock) Data[section][key] = value.ToString().Trim();
+        bool keyExists = KeyExists(section, key);
+        string valueString = value.ToString().Trim();
+        lock (Lock) Data[section][key] = valueString;
+        if (keyExists) OnKeyChanged?.Invoke(section, key, valueString);
+        else OnKeyAdded?.Invoke(section, key, valueString);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             await SaveFileAsync();
+        }
     }
 
     /// <summary>
@@ -299,8 +410,13 @@ public class NeoIniReader : IDisposable
     {
         if (!KeyExists(section, key)) return;
         lock (Lock) Data[section].Remove(key);
+        OnKeyRemoved?.Invoke(section, key);
+        OnSectionChanged?.Invoke(section);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             SaveFile();
+        }
     }
 
     /// <summary>
@@ -312,8 +428,13 @@ public class NeoIniReader : IDisposable
     {
         if (!KeyExists(section, key)) return;
         lock (Lock) Data[section].Remove(key);
+        OnKeyRemoved?.Invoke(section, key);
+        OnSectionChanged?.Invoke(section);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             await SaveFileAsync();
+        }
     }
 
     /// <summary>
@@ -325,7 +446,10 @@ public class NeoIniReader : IDisposable
         if (!SectionExists(section)) return;
         lock (Lock) Data.Remove(section);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             SaveFile();
+        }
     }
 
     /// <summary>
@@ -337,7 +461,10 @@ public class NeoIniReader : IDisposable
         if (!SectionExists(section)) return;
         lock (Lock) Data.Remove(section);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             await SaveFileAsync();
+        }
     }
 
     /// <summary>
@@ -422,8 +549,12 @@ public class NeoIniReader : IDisposable
     {
         if (!SectionExists(section)) return;
         lock (Lock) Data[section].Clear();
+        OnSectionChanged?.Invoke(section);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             SaveFile();
+        }
     }
 
     /// <summary>
@@ -434,8 +565,12 @@ public class NeoIniReader : IDisposable
     {
         if (!SectionExists(section)) return;
         lock (Lock) Data[section].Clear();
+        OnSectionChanged?.Invoke(section);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             await SaveFileAsync();
+        }
     }
 
     /// <summary>
@@ -451,9 +586,13 @@ public class NeoIniReader : IDisposable
         {
             Data[section][newKey] = Data[section][oldKey];
             Data[section].Remove(oldKey);
+            OnKeyChanged?.Invoke(section, oldKey, Data[section][newKey]);
         }
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             SaveFile();
+        }
     }
 
     /// <summary>
@@ -469,9 +608,13 @@ public class NeoIniReader : IDisposable
         {
             Data[section][newKey] = Data[section][oldKey];
             Data[section].Remove(oldKey);
+            OnKeyChanged?.Invoke(section, oldKey, Data[section][newKey]);
         }
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             await SaveFileAsync();
+        }
     }
 
     /// <summary>
@@ -487,8 +630,12 @@ public class NeoIniReader : IDisposable
             Data[newSection] = Data[oldSection];
             Data.Remove(oldSection);
         }
+        OnSectionChanged?.Invoke(oldSection);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             SaveFile();
+        }
     }
 
     /// <summary>
@@ -504,8 +651,12 @@ public class NeoIniReader : IDisposable
             Data[newSection] = Data[oldSection];
             Data.Remove(oldSection);
         }
+        OnSectionChanged?.Invoke(oldSection);
         if (AutoSave && (!UseAutoSaveInterval || ++SaveIterationCounter % AutoSaveInterval == 0))
+        {
+            OnAutoSave?.Invoke();
             await SaveFileAsync();
+        }
     }
 
     /// <summary>
@@ -543,7 +694,11 @@ public class NeoIniReader : IDisposable
     /// <summary>
     /// Reloads data from the INI file, updating the internal data structure.
     /// </summary>
-    public void ReloadFromFile() { lock (Lock) Data = FileProvider.GetData(UseChecksum); }
+    public void ReloadFromFile()
+    {
+        lock (Lock) Data = FileProvider.GetData(UseChecksum);
+        OnLoad?.Invoke();
+    }
 
     /// <summary>
     /// Asynchronously reloads data from an INI file.
@@ -568,7 +723,8 @@ public class NeoIniReader : IDisposable
     public void DeleteFileWithData()
     {
         DeleteFile();
-        Data.Clear();
+        lock (Lock) Data.Clear();
+        OnDataCleared?.Invoke();
     }
 
     /// <summary>
@@ -584,6 +740,13 @@ public class NeoIniReader : IDisposable
     public string GetEncryptionPassword()
     {
         if (!AutoEncryption) return "AutoEncryption is disabled";
+        if (CustomEncryptionPassword) return "CustomEncryptionPassword is used. For security reasons, the password is not saved.";
         return NeoIniEncryptionProvider.GetEncryptionPassword();
     }
+
+    /// <summary>
+    /// Asynchronously returns the current encryption password if encryption is enabled, or a status message if disabled.
+    /// </summary>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the generated encryption password or status message.</returns>
+    public async Task<string> GetEncryptionPasswordAsync() => await Task.Run(GetEncryptionPassword);
 }
