@@ -16,19 +16,22 @@ internal sealed class NeoIniFileProvider
     private readonly byte[] EncryptionKey;
     private readonly bool AutoEncryption = false;
     private Action<Exception> OnError;
+    private Action<byte[], byte[]> OnChecksumMismatch;
 
-    internal NeoIniFileProvider(string filePath, Action<Exception> onError)
+    internal NeoIniFileProvider(string filePath, Action<Exception> onError, Action<byte[], byte[]> onChecksumMismatch)
     {
         FilePath = filePath;
         OnError = onError;
+        OnChecksumMismatch = onChecksumMismatch;
     }
 
-    internal NeoIniFileProvider(string filePath, byte[] encryptionKey, Action<Exception> onError)
+    internal NeoIniFileProvider(string filePath, byte[] encryptionKey, Action<Exception> onError, Action<byte[], byte[]> onChecksumMismatch)
     {
         FilePath = filePath;
         EncryptionKey = encryptionKey;
         AutoEncryption = true;
         OnError = onError;
+        OnChecksumMismatch = onChecksumMismatch;
     }
 
     internal Dictionary<string, Dictionary<string, string>> GetData(bool useChecksum)
@@ -203,8 +206,11 @@ internal sealed class NeoIniFileProvider
         byte[] checksumWithPlaceholder = new byte[data.Length];
         Array.Copy(data, checksumWithPlaceholder, data.Length - 8);
         Array.Copy(new byte[8], 0, checksumWithPlaceholder, data.Length - 8, 8);
+        byte[] checksum = data[^8..];
         byte[] calculatedChecksum = SHA256.HashData(checksumWithPlaceholder)[..8];
-        return data[^8..].SequenceEqual(calculatedChecksum);
+        bool result = checksum.SequenceEqual(calculatedChecksum);
+        if (!result) OnChecksumMismatch?.Invoke(calculatedChecksum, checksum);
+        return result;
     }
 
     private byte[] AddChecksum(byte[] data, bool useChecksum)

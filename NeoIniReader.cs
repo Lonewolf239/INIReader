@@ -12,7 +12,7 @@ namespace NeoIni;
 /// <br/>
 /// <b>Target Framework: .NET 6+</b>
 /// <br/>
-/// <b>Version: 1.5.6.3</b>
+/// <b>Version: 1.5.6.4</b>
 /// <br/>
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
@@ -137,6 +137,20 @@ public class NeoIniReader : IDisposable
     /// <param>An exception containing information about the error.</param>
     public Action<Exception> OnError;
 
+    /// <summary>
+    /// Called when the checksum does not match when loading a file.
+    /// </summary>
+    /// <param>Expected checksum.</param>
+    /// <param>Actual checksum.</param>
+    public Action<byte[], byte[]> OnChecksumMismatch;
+
+    /// <summary>
+    /// Called after each search.
+    /// </summary>
+    /// <param>Search pattern.</param>
+    /// <param>Number of matches found.</param>
+    public Action<string, int> OnSearchCompleted;
+
     private readonly bool AutoEncryption = false;
     private readonly bool CustomEncryptionPassword = false;
     private readonly byte[] EncryptionKey;
@@ -160,9 +174,9 @@ public class NeoIniReader : IDisposable
         {
             EncryptionKey = NeoIniEncryptionProvider.GetEncryptionKey();
             AutoEncryption = true;
-            FileProvider = new(FilePath, EncryptionKey, OnError);
+            FileProvider = new(FilePath, EncryptionKey, OnError, OnChecksumMismatch);
         }
-        else FileProvider = new(FilePath, OnError);
+        else FileProvider = new(FilePath, OnError, OnChecksumMismatch);
         Data = FileProvider.GetData(UseChecksum);
         OnLoad?.Invoke();
     }
@@ -179,7 +193,7 @@ public class NeoIniReader : IDisposable
             throw new ArgumentException("Encryption password cannot be null or empty.", nameof(encryptionPassword));
         EncryptionKey = NeoIniEncryptionProvider.GetEncryptionKey(encryptionPassword);
         AutoEncryption = CustomEncryptionPassword = true;
-        FileProvider = new(FilePath, EncryptionKey, OnError);
+        FileProvider = new(FilePath, EncryptionKey, OnError, OnChecksumMismatch);
         Data = FileProvider.GetData(UseChecksum);
         OnLoad?.Invoke();
     }
@@ -650,6 +664,7 @@ public class NeoIniReader : IDisposable
                 }
             }
         }
+        OnSearchCompleted?.Invoke(pattern, results.Count);
         return results;
     }
 
