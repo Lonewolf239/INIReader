@@ -1,11 +1,3 @@
-[![NeoIni](https://img.shields.io/badge/NeoIni-Black%20Box-2D2D2D?style=for-the-badge&logo=lock&logoColor=FFFFFF)](https://github.com/Lonewolf239/NeoIni)
-[![NuGet](https://img.shields.io/nuget/v/NeoIni?style=for-the-badge&logo=nuget&logoColor=FFFFFF)](https://www.nuget.org/packages/NeoIni)
-[![.NET 6+](https://img.shields.io/badge/.NET-6+-2D2D2D?style=for-the-badge&logo=dotnet&logoColor=FFFFFF)](https://dotnet.microsoft.com/)
-
-[![GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge&logo=heart&logoColor=FFFFFF)](https://www.gnu.org/licenses/gpl-3.0.html)
-[![Thread-Safe](https://img.shields.io/badge/Thread-Safe-2D2D2D?style=for-the-badge&logo=verified&logoColor=FFFFFF)](https://github.com/Lonewolf239/NeoIni)
-[![Downloads](https://img.shields.io/nuget/dt/NeoIni?style=for-the-badge&logo=download&logoColor=FFFFFF)](https://www.nuget.org/packages/NeoIni)
-
 # NeoIni
 
 NeoIni is a fully-featured C# library for working with INI files that provides secure, thread-safe read/write configuration with built-in integrity checking (checksum) and optional AES encryption.

@@ -15,23 +15,16 @@ internal sealed class NeoIniFileProvider
     private string BackupFilePath => FilePath + ".backup";
     private readonly byte[] EncryptionKey;
     private readonly bool AutoEncryption = false;
-    private Action<Exception> OnError;
-    private Action<byte[], byte[]> OnChecksumMismatch;
+    internal Action<Exception> OnError;
+    internal Action<byte[], byte[]> OnChecksumMismatch;
 
-    internal NeoIniFileProvider(string filePath, Action<Exception> onError, Action<byte[], byte[]> onChecksumMismatch)
-    {
-        FilePath = filePath;
-        OnError = onError;
-        OnChecksumMismatch = onChecksumMismatch;
-    }
+    internal NeoIniFileProvider(string filePath) => FilePath = filePath;
 
-    internal NeoIniFileProvider(string filePath, byte[] encryptionKey, Action<Exception> onError, Action<byte[], byte[]> onChecksumMismatch)
+    internal NeoIniFileProvider(string filePath, byte[] encryptionKey)
     {
         FilePath = filePath;
         EncryptionKey = encryptionKey;
         AutoEncryption = true;
-        OnError = onError;
-        OnChecksumMismatch = onChecksumMismatch;
     }
 
     internal Dictionary<string, Dictionary<string, string>> GetData(bool useChecksum)

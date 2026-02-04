@@ -7,26 +7,20 @@ namespace NeoIni;
 
 internal sealed class NeoIniParser
 {
-    internal static string GetStringRaw(object sync, Dictionary<string, Dictionary<string, string>> data, string section, string keyName)
-    {
-        lock (sync)
-            return data.TryGetValue(section, out var sec) && sec.TryGetValue(keyName, out var val) ? val.Trim() : null;
-    }
+    internal static string GetStringRaw(Dictionary<string, Dictionary<string, string>> data, string section, string keyName) =>
+        data.TryGetValue(section, out var sec) && sec.TryGetValue(keyName, out var val) ? val.Trim() : null;
 
-    internal static string GetContent(object sync, Dictionary<string, Dictionary<string, string>> data)
+    internal static string GetContent(Dictionary<string, Dictionary<string, string>> data)
     {
         var content = new StringBuilder();
-        lock (sync)
+        content.Append("; Do not modify this file! This will result in data loss!\n");
+        content.Append("; (Data will be downloaded from the backup)\n");
+        foreach (var section in data)
         {
-            content.Append("; Do not modify this file! This will result in data loss!\n");
-            content.Append("; (Data will be downloaded from the backup)\n");
-            foreach (var section in data)
-            {
-                content.Append($"[{section.Key}]\n");
-                foreach (var kvp in section.Value)
-                    content.Append($"{kvp.Key} = {kvp.Value}\n");
-                content.Append("\n");
-            }
+            content.Append($"[{section.Key}]\n");
+            foreach (var kvp in section.Value)
+                content.Append($"{kvp.Key} = {kvp.Value}\n");
+            content.Append("\n");
         }
         return content.ToString();
     }
