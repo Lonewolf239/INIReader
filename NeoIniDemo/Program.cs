@@ -47,7 +47,6 @@ class NeoIniDemo
         Console.WriteLine($"- AutoBackup: {ini.AutoBackup}");
         Console.WriteLine($"- UseChecksum: {ini.UseChecksum}");
         Console.WriteLine($"- AutoSaveInterval: {ini.AutoSaveInterval}");
-        Console.WriteLine($"- UseAutoSaveInterval: {ini.UseAutoSaveInterval}");
 
         Console.WriteLine("Press any key to continue...");
         Console.ReadKey(true);
@@ -159,7 +158,7 @@ class NeoIniDemo
         Console.WriteLine($"Auto-save every {ini.AutoSaveInterval} operations");
 
         Console.Write("Adding logs: ");
-        ini.UseAutoSaveInterval = true;
+        ini.AutoSaveInterval = 3;
         ini.OnAutoSave += () => Console.Write("SAVED ");
         for (int i = 1; i <= 6; i++)
         {
