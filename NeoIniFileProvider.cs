@@ -94,12 +94,14 @@ internal sealed class NeoIniFileProvider
             }
             if (!AutoEncryption)
             {
-                content = Encoding.UTF8.GetString(fileBytes, 0, fileBytes.Length - 8);
+                int length = useChecksum ? fileBytes.Length - 8 : fileBytes.Length;
+                content = Encoding.UTF8.GetString(fileBytes, 0, length);
                 return content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
             }
             byte[] iv = new byte[16];
             Array.Copy(fileBytes, 0, iv, 0, 16);
-            int encryptedLength = fileBytes.Length - 16 - 8;
+            int encryptedLength = fileBytes.Length - 16;
+            if (useChecksum) encryptedLength -= 8;
             byte[] encryptedContent = new byte[encryptedLength];
             Array.Copy(fileBytes, 16, encryptedContent, 0, encryptedLength);
             using var aes = Aes.Create();

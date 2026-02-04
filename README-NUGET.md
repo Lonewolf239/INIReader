@@ -9,7 +9,7 @@ dotnet add package NeoIni
 ```
 
 - **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)
-- **Version:** `1.5.7.2` | **.NET 6+**
+- **Version:** `1.5.7.3` | **.NET 6+**
 - **Developer:** [Lonewolf239](https://github.com/Lonewolf239)
 
 ## Features
@@ -248,6 +248,7 @@ using NeoIniReader reader = new("config.ini");
 | `AutoBackup` | Creates backup files (.backup) during save operations for safety | `true` |
 | `AutoAdd` | Automatically creates missing sections/keys with default values when reading via `GetValue<T>` | `true` |
 | `UseChecksum` | Calculates and verifies checksums during load/save operations to detect corruption or tampering | `true` |
+| `SaveOnDispose` | Automatically saves the configuration when the instance is disposed | `true` |
 
 | Action | Description |
 |--------|-------------|
