@@ -817,6 +817,7 @@ public class NeoIniReader : IDisposable
         Lock.EnterWriteLock();
         try { Data.Clear(); }
         finally { Lock.ExitWriteLock(); }
+        OnDataCleared?.Invoke();
     }
 
     /// <summary>
