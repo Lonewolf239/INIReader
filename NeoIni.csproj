@@ -7,7 +7,7 @@
 		<Description>Modern INI reader/writer for .NET 6+. AES encryption, thread-safe.</Description>
 		<PackageTags>ini;config;encryption;ini-parser;configuration;secure-config;aes-ini;.NET6;.NET7;.NET8;.NET9;.NET10</PackageTags>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryUrl>https://github.com/Lonewolf239/NeoIni</RepositoryUrl>
 		<PackageIcon>icon.png</PackageIcon>
