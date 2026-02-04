@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Data = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
 
 namespace NeoIni;
 
@@ -27,9 +28,9 @@ internal sealed class NeoIniFileProvider
         AutoEncryption = true;
     }
 
-    internal Dictionary<string, Dictionary<string, string>> GetData(bool useChecksum)
+    internal Data GetData(bool useChecksum)
     {
-        var data = new Dictionary<string, Dictionary<string, string>>();
+        var data = new Data();
         string directory = Path.GetDirectoryName(FilePath);
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
         if (!File.Exists(FilePath))

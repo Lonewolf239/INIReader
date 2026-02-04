@@ -155,10 +155,10 @@ class NeoIniDemo
         Console.WriteLine("Data reloaded from file");
         Console.WriteLine($"Database Host: {ini.GetValue("Database", "Host", "")}");
 
+        ini.AutoSaveInterval = 3;
         Console.WriteLine($"Auto-save every {ini.AutoSaveInterval} operations");
 
         Console.Write("Adding logs: ");
-        ini.AutoSaveInterval = 3;
         ini.OnAutoSave += () => Console.Write("SAVED ");
         for (int i = 1; i <= 6; i++)
         {

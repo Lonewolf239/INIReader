@@ -1,16 +1,16 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using Data = System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>>;
 
 namespace NeoIni;
 
 internal sealed class NeoIniParser
 {
-    internal static string GetStringRaw(Dictionary<string, Dictionary<string, string>> data, string section, string keyName) =>
+    internal static string GetStringRaw(Data data, string section, string keyName) =>
         data.TryGetValue(section, out var sec) && sec.TryGetValue(keyName, out var val) ? val.Trim() : null;
 
-    internal static string GetContent(Dictionary<string, Dictionary<string, string>> data)
+    internal static string GetContent(Data data)
     {
         var content = new StringBuilder();
         content.Append("; Do not modify this file! This will result in data loss!\n");

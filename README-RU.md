@@ -18,7 +18,7 @@ dotnet add package NeoIni
 ```
 
 - **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)
-- **Version:** `1.5.7` | **.NET 6+**
+- **Version:** `1.5.7.1` | **.NET 6+**
 - **Developer:** [Lonewolf239](https://github.com/Lonewolf239)
 
 ## Features
@@ -157,7 +157,7 @@ reader.UseChecksum = true;          // включить checksum
 ### Events (Callbacks)
 
 ```csharp
-reader.OnSave += () => Console.WriteLine("Saving...");
+reader.OnSave += () => Console.WriteLine("Saved");
 reader.OnLoad += () => Console.WriteLine("Loaded");
 
 reader.OnKeyChanged += (section, key, value) =>
@@ -259,7 +259,7 @@ using NeoIniReader reader = new("config.ini");
 
 | Событие | Описание |
 |---------|----------|
-| `OnSave` | Вызывается перед сохранением файла на диск |
+| `OnSave` | Вызывается после сохранения файла на диск |
 | `OnLoad` | Вызывается после успешной загрузки данных из файла или перезагрузки |
 | `OnKeyChanged` | Вызывается при изменении значения существующего ключа в секции |
 | `OnKeyAdded` | Вызывается при добавлении нового ключа в секцию |
