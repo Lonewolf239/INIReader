@@ -13,7 +13,7 @@ namespace NeoIni;
 /// <br/>
 /// <b>Target Framework: .NET 6+</b>
 /// <br/>
-/// <b>Version: 1.5.7.1</b>
+/// <b>Version: 1.5.7.2</b>
 /// <br/>
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
@@ -421,6 +421,57 @@ public class NeoIniReader : IDisposable
         }
         if (stringValue == null) return defaultValue;
         return NeoIniParser.TryParseValue<T>(stringValue, defaultValue, OnError);
+    }
+
+    /// <summary>
+    /// Retrieves a numeric or comparable value from the INI file and clamps it within the specified range.
+    /// </summary>
+    /// <typeparam name="T">
+    /// The comparable type of the value (e.g., <see cref="int"/>, <see cref="double"/>, <see cref="DateTime"/>, etc.).
+    /// </typeparam>
+    /// <param name="section">The section containing the key.</param>
+    /// <param name="key">The name of the key to retrieve.</param>
+    /// <param name="minValue">The minimum allowed value.</param>
+    /// <param name="maxValue">The maximum allowed value.</param>
+    /// <param name="defaultValue">
+    /// The value to return if the key or section does not exist, or if parsing fails.
+    /// </param>
+    /// <returns>
+    /// The parsed and clamped value. If retrieval or parsing fails, returns <paramref name="defaultValue"/>.
+    /// </returns>
+    public T GetValueClamp<T>(string section, string key, T minValue, T maxValue, T defaultValue = default(T)) where T : IComparable<T>
+    {
+        T value = GetValue<T>(section, key, defaultValue);
+        var comparer = Comparer<T>.Default;
+        if (comparer.Compare(value, minValue) < 0) return minValue;
+        if (comparer.Compare(value, maxValue) > 0) return maxValue;
+        return value;
+    }
+
+    /// <summary>
+    /// Asynchronously retrieves a numeric or comparable value from the INI file and clamps it within the specified range.
+    /// </summary>
+    /// <typeparam name="T">
+    /// The comparable type of the value (e.g., <see cref="int"/>, <see cref="double"/>, <see cref="DateTime"/>, etc.).
+    /// </typeparam>
+    /// <param name="section">The section containing the key.</param>
+    /// <param name="key">The name of the key to retrieve.</param>
+    /// <param name="minValue">The minimum allowed value.</param>
+    /// <param name="maxValue">The maximum allowed value.</param>
+    /// <param name="defaultValue">
+    /// The value to return if the key or section does not exist, or if parsing fails.
+    /// </param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. The task result contains the parsed and clamped value,
+    /// or <paramref name="defaultValue"/> if retrieval fails.
+    /// </returns>
+    public async Task<T> GetValueClampAsync<T>(string section, string key, T minValue, T maxValue, T defaultValue = default(T)) where T : IComparable<T>
+    {
+        T value = await GetValueAsync<T>(section, key, defaultValue);
+        var comparer = Comparer<T>.Default;
+        if (comparer.Compare(value, minValue) < 0) return minValue;
+        if (comparer.Compare(value, maxValue) > 0) return maxValue;
+        return value;
     }
 
     /// <summary>Updates or creates a key-value pair in the specified section</summary>

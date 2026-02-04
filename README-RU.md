@@ -18,7 +18,7 @@ dotnet add package NeoIni
 ```
 
 - **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)
-- **Version:** `1.5.7.1` | **.NET 6+**
+- **Version:** `1.5.7.2` | **.NET 6+**
 - **Developer:** [Lonewolf239](https://github.com/Lonewolf239)
 
 ## Features
@@ -228,6 +228,7 @@ using NeoIniReader reader = new("config.ini");
 | Метод | Описание | Асинхронная версия |
 |-------|----------|--------------------|
 | `GetValue<T>` | Чтение типизированного значения с возвратом по умолчанию | `GetValueAsync<T>` |
+| `GetValueClamp<T>` | Читает типизированное значение и ограничивает его заданным диапазоном (min/max) | `GetValueClampAsync<T>` |
 | `SetKey<T>` | Установка/создание пары ключ-значение | `SetKeyAsync<T>` |
 | `AddSection` | Создание секции при отсутствии | `AddSectionAsync` |
 | `AddKeyInSection<T>` | Добавление уникальной пары ключ-значение | `AddKeyInSectionAsync<T>` |

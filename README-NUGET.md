@@ -9,7 +9,7 @@ dotnet add package NeoIni
 ```
 
 - **Package:** [nuget.org/packages/NeoIni](https://www.nuget.org/packages/NeoIni)
-- **Version:** `1.5.7.1` | **.NET 6+**
+- **Version:** `1.5.7.2` | **.NET 6+**
 - **Developer:** [Lonewolf239](https://github.com/Lonewolf239)
 
 ## Features
@@ -219,6 +219,7 @@ using NeoIniReader reader = new("config.ini");
 | Method | Description | Async Version |
 |--------|-----------  |---------------|
 | `GetValue<T>` | Read typed value with default fallback | `GetValueAsync<T>` |
+| `GetValueClamp<T>` | Read typed value and clamp it between min/max | `GetValueClampAsync<T>` |
 | `SetKey<T>` | Set/create key-value | `SetKeyAsync<T>` |
 | `AddSection` | Create section if missing | `AddSectionAsync` |
 | `AddKeyInSection<T>` | Add unique key-value | `AddKeyInSectionAsync<T>` |
