@@ -176,6 +176,12 @@ class NeoIniDemo
         Console.Clear();
         Console.WriteLine("6. FILE ERROR RECOVERY");
         using var ini = new NeoIniReader(TestFile, Encryption);
+        ini.OnChecksumMismatch += (expected, actual) =>
+        {
+            var expectedHex = BitConverter.ToString(expected);
+            var actualHex = BitConverter.ToString(actual);
+            Console.WriteLine($"Checksum mismatch: expected {expectedHex}, actual {actualHex}");
+        };
 
         Console.WriteLine("\nBEFORE DAMAGE - All sections:");
         ShowContent(ini);
@@ -243,13 +249,8 @@ class NeoIniDemo
         Console.WriteLine("8. COMPLETE CLEANUP");
         using var ini = new NeoIniReader(TestFile, Encryption);
 
-        var sections = ini.GetAllSections();
         Console.WriteLine("Final content before cleanup:");
         ShowContent(ini);
-
-        ini.RemoveKey("User", "Age");
-        ini.RemoveSection("Logs");
-        Console.WriteLine("Removed key 'Age' and section 'Logs'");
 
         ini.DeleteFileWithData();
         Console.WriteLine("File deleted from disk + memory cleared");
