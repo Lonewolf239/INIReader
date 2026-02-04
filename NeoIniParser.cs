@@ -13,14 +13,16 @@ internal sealed class NeoIniParser
     internal static string GetContent(Data data)
     {
         var content = new StringBuilder();
-        content.Append("; Do not modify this file! This will result in data loss!\n");
-        content.Append("; (Data will be downloaded from the backup)\n");
+        content.AppendLine("; WARNING: This file is auto-generated.");
+        content.AppendLine("; Any manual changes will be overwritten and may cause data loss.");
+        content.AppendLine("; The original data will be restored from backup.");
+        content.AppendLine();
         foreach (var section in data)
         {
-            content.Append($"[{section.Key}]\n");
+            content.AppendLine($"[{section.Key}]");
             foreach (var kvp in section.Value)
-                content.Append($"{kvp.Key} = {kvp.Value}\n");
-            content.Append("\n");
+                content.AppendLine($"{kvp.Key} = {kvp.Value}");
+            content.AppendLine();
         }
         return content.ToString();
     }

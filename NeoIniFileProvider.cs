@@ -44,7 +44,7 @@ internal sealed class NeoIniFileProvider
         foreach (var line in lines)
         {
             var trimmed = line.Trim();
-            if (string.IsNullOrWhiteSpace(trimmed)) continue;
+            if (string.IsNullOrEmpty(trimmed)) continue;
             if (trimmed.StartsWith(';')) continue;
             if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
             {
