@@ -86,7 +86,7 @@ internal sealed class NeoIniFileProvider
         {
             byte[] fileBytes = File.ReadAllBytes(path);
             int headerLength = Encoding.UTF8.GetByteCount(WarningText);
-            if (fileBytes.Length < headerLength + (useChecksum ? 8 : 0) + (AutoEncryption ? 16 : 0))
+            if (fileBytes.Length < headerLength + (useChecksum ? ChecksumSize : 0) + (AutoEncryption ? 16 : 0))
             {
                 if (isBackup) return null;
                 return CheckBackup(useChecksum);
@@ -97,7 +97,7 @@ internal sealed class NeoIniFileProvider
                 return CheckBackup(useChecksum);
             }
             string content;
-            int totalDataLength = useChecksum ? fileBytes.Length - 8 : fileBytes.Length;
+            int totalDataLength = useChecksum ? fileBytes.Length - ChecksumSize : fileBytes.Length;
             if (!AutoEncryption)
             {
                 int contentLength = totalDataLength - headerLength;
