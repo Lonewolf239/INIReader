@@ -16,6 +16,8 @@ internal sealed class NeoIniFileProvider
     private string BackupFilePath => FilePath + ".backup";
     private readonly byte[] EncryptionKey;
     private readonly bool AutoEncryption = false;
+    private const int ChecksumSize = 32;
+    private string WarningText = "; WARNING: This file is auto-generated.\n; Any manual changes will be overwritten and may cause data loss.\n; The original data will be restored from backup.\n";
     internal Action<Exception> OnError;
     internal Action<byte[], byte[]> OnChecksumMismatch;
 
@@ -63,6 +65,8 @@ internal sealed class NeoIniFileProvider
         if (File.Exists(TempFilePath)) File.Delete(TempFilePath);
     }
 
+    internal void DeleteBackup() { if (File.Exists(BackupFilePath)) File.Delete(BackupFilePath); }
+
     private string[] CheckBackup(bool useChecksum)
     {
         if (!File.Exists(BackupFilePath)) return null;
@@ -81,45 +85,52 @@ internal sealed class NeoIniFileProvider
         try
         {
             byte[] fileBytes = File.ReadAllBytes(path);
-            if (fileBytes.Length < 24)
+            int headerLength = Encoding.UTF8.GetByteCount(WarningText);
+            if (fileBytes.Length < headerLength + (useChecksum ? 8 : 0) + (AutoEncryption ? 16 : 0))
             {
                 if (isBackup) return null;
                 return CheckBackup(useChecksum);
             }
-            string content;
             if (!ValidateChecksum(fileBytes, useChecksum))
             {
                 if (isBackup) return null;
                 return CheckBackup(useChecksum);
             }
+            string content;
+            int totalDataLength = useChecksum ? fileBytes.Length - 8 : fileBytes.Length;
             if (!AutoEncryption)
             {
-                int length = useChecksum ? fileBytes.Length - 8 : fileBytes.Length;
-                content = Encoding.UTF8.GetString(fileBytes, 0, length);
+                int contentLength = totalDataLength - headerLength;
+                if (contentLength <= 0) return new string[0];
+                content = Encoding.UTF8.GetString(fileBytes, headerLength, contentLength);
                 return content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
             }
-            byte[] iv = new byte[16];
-            Array.Copy(fileBytes, 0, iv, 0, 16);
-            int encryptedLength = fileBytes.Length - 16;
-            if (useChecksum) encryptedLength -= 8;
-            byte[] encryptedContent = new byte[encryptedLength];
-            Array.Copy(fileBytes, 16, encryptedContent, 0, encryptedLength);
-            using var aes = Aes.Create();
-            aes.Key = EncryptionKey;
-            aes.IV = iv;
-            using var decryptor = aes.CreateDecryptor();
-            using var ms = new MemoryStream(encryptedContent);
-            using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
-            using var sr = new StreamReader(cs, Encoding.UTF8);
-            content = sr.ReadToEnd();
-            return content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
+            else
+            {
+                byte[] iv = new byte[16];
+                Array.Copy(fileBytes, headerLength, iv, 0, 16);
+                int dataStartIndex = headerLength + 16;
+                int encryptedLength = totalDataLength - dataStartIndex;
+                if (encryptedLength <= 0) return new string[0];
+                byte[] encryptedContent = new byte[encryptedLength];
+                Array.Copy(fileBytes, dataStartIndex, encryptedContent, 0, encryptedLength);
+                using var aes = Aes.Create();
+                aes.Key = EncryptionKey;
+                aes.IV = iv;
+                using var decryptor = aes.CreateDecryptor();
+                using var ms = new MemoryStream(encryptedContent);
+                using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
+                using var sr = new StreamReader(cs, Encoding.UTF8);
+                content = sr.ReadToEnd();
+                return content.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None);
+            }
         }
         catch (CryptographicException ex)
         {
             if (isBackup) return null;
             var data = CheckBackup(useChecksum);
             if (data != null) return data;
-            throw new InvalidOperationException("Failed to decrypt configuration file. Invalid encryption key or corrupted data.", ex);
+            throw new InvalidOperationException("Failed to decrypt configuration file.", ex);
         }
         catch (Exception ex)
         {
@@ -132,6 +143,7 @@ internal sealed class NeoIniFileProvider
     internal void SaveFile(string content, bool useChecksum, bool useBackup)
     {
         if (string.IsNullOrEmpty(content)) return;
+        byte[] warningBytes = Encoding.UTF8.GetBytes(WarningText);
         byte[] plaintextBytes = Encoding.UTF8.GetBytes(content);
         byte[] dataWithChecksum;
         try
@@ -139,6 +151,10 @@ internal sealed class NeoIniFileProvider
             if (!AutoEncryption)
             {
                 dataWithChecksum = AddChecksum(plaintextBytes, useChecksum);
+                using var ms = new MemoryStream(warningBytes.Length + plaintextBytes.Length);
+                ms.Write(warningBytes, 0, warningBytes.Length);
+                ms.Write(plaintextBytes, 0, plaintextBytes.Length);
+                dataWithChecksum = AddChecksum(ms.ToArray(), useChecksum);
                 File.WriteAllBytes(TempFilePath, dataWithChecksum);
             }
             else
@@ -148,12 +164,12 @@ internal sealed class NeoIniFileProvider
                 aes.GenerateIV();
                 using var encryptor = aes.CreateEncryptor();
                 using var ms = new MemoryStream();
+                ms.Write(warningBytes, 0, warningBytes.Length);
                 ms.Write(aes.IV, 0, aes.IV.Length);
                 using var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write);
                 cs.Write(plaintextBytes, 0, plaintextBytes.Length);
                 cs.FlushFinalBlock();
-                byte[] encryptedData = ms.ToArray();
-                dataWithChecksum = AddChecksum(encryptedData, useChecksum);
+                dataWithChecksum = AddChecksum(ms.ToArray(), useChecksum);
                 File.WriteAllBytes(TempFilePath, dataWithChecksum);
             }
             if (useBackup) File.Replace(TempFilePath, FilePath, BackupFilePath);
@@ -165,6 +181,7 @@ internal sealed class NeoIniFileProvider
     internal async Task SaveFileAsync(string content, bool useChecksum, bool useBackup)
     {
         if (string.IsNullOrEmpty(content)) return;
+        byte[] warningBytes = Encoding.UTF8.GetBytes(WarningText);
         byte[] plaintextBytes = Encoding.UTF8.GetBytes(content);
         byte[] dataWithChecksum;
         try
@@ -172,7 +189,11 @@ internal sealed class NeoIniFileProvider
             if (!AutoEncryption)
             {
                 dataWithChecksum = AddChecksum(plaintextBytes, useChecksum);
-                await File.WriteAllBytesAsync(TempFilePath, dataWithChecksum).ConfigureAwait(false);
+                using var ms = new MemoryStream(warningBytes.Length + plaintextBytes.Length);
+                await ms.WriteAsync(warningBytes, 0, warningBytes.Length).ConfigureAwait(false);
+                await ms.WriteAsync(plaintextBytes, 0, plaintextBytes.Length).ConfigureAwait(false);
+                dataWithChecksum = AddChecksum(ms.ToArray(), useChecksum);
+                File.WriteAllBytes(TempFilePath, dataWithChecksum);
             }
             else
             {
@@ -181,12 +202,12 @@ internal sealed class NeoIniFileProvider
                 aes.GenerateIV();
                 using var encryptor = aes.CreateEncryptor();
                 await using var ms = new MemoryStream();
+                await ms.WriteAsync(warningBytes, 0, warningBytes.Length).ConfigureAwait(false);
                 await ms.WriteAsync(aes.IV, 0, aes.IV.Length).ConfigureAwait(false);
                 await using var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write);
                 await cs.WriteAsync(plaintextBytes, 0, plaintextBytes.Length).ConfigureAwait(false);
                 await cs.FlushFinalBlockAsync().ConfigureAwait(false);
-                byte[] encryptedData = ms.ToArray();
-                dataWithChecksum = AddChecksum(encryptedData, useChecksum);
+                dataWithChecksum = AddChecksum(ms.ToArray(), useChecksum);
                 await File.WriteAllBytesAsync(TempFilePath, dataWithChecksum).ConfigureAwait(false);
             }
             if (useBackup) File.Replace(TempFilePath, FilePath, BackupFilePath);
@@ -198,25 +219,25 @@ internal sealed class NeoIniFileProvider
     private bool ValidateChecksum(byte[] data, bool useChecksum)
     {
         if (!useChecksum) return true;
-        if (data.Length < 8) return false;
-        byte[] checksumWithPlaceholder = new byte[data.Length];
-        Array.Copy(data, checksumWithPlaceholder, data.Length - 8);
-        Array.Copy(new byte[8], 0, checksumWithPlaceholder, data.Length - 8, 8);
-        byte[] checksum = data[^8..];
-        byte[] calculatedChecksum = SHA256.HashData(checksumWithPlaceholder)[..8];
-        bool result = checksum.SequenceEqual(calculatedChecksum);
-        if (!result) OnChecksumMismatch?.Invoke(calculatedChecksum, checksum);
+        if (data.Length < ChecksumSize) return false;
+        int dataSize = data.Length - ChecksumSize;
+        byte[] dataWithOutChecksum = new byte[dataSize];
+        byte[] checksumFromData = new byte[ChecksumSize];
+        Array.Copy(data, 0, dataWithOutChecksum, 0, dataSize);
+        Array.Copy(data, dataSize, checksumFromData, 0, ChecksumSize);
+        byte[] calculatedChecksum = SHA256.HashData(dataWithOutChecksum);
+        bool result = checksumFromData.SequenceEqual(calculatedChecksum);
+        if (!result) OnChecksumMismatch?.Invoke(calculatedChecksum, checksumFromData);
         return result;
     }
 
     private byte[] AddChecksum(byte[] data, bool useChecksum)
     {
         if (!useChecksum) return data;
-        byte[] checksumWithPlaceholder = new byte[data.Length + 8];
-        Array.Copy(data, checksumWithPlaceholder, data.Length);
-        Array.Copy(new byte[8], 0, checksumWithPlaceholder, data.Length, 8);
-        byte[] checksum = SHA256.HashData(checksumWithPlaceholder)[..8];
-        Array.Copy(checksum, 0, checksumWithPlaceholder, data.Length, 8);
-        return checksumWithPlaceholder;
+        byte[] dataWithChecksum = new byte[data.Length + ChecksumSize];
+        Array.Copy(data, dataWithChecksum, data.Length);
+        byte[] checksum = SHA256.HashData(data);
+        Array.Copy(checksum, 0, dataWithChecksum, data.Length, ChecksumSize);
+        return dataWithChecksum;
     }
 }

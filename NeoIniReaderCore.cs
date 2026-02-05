@@ -27,10 +27,16 @@ internal sealed class NeoIniReaderCore
         data[section][key] = value;
     }
 
-    internal static void SetKey(Data data, string section, string key, string value)
+    internal static bool SetKey(Data data, string section, string key, string value)
     {
-        if (!SectionExists(data, section)) AddSection(data, section);
+        bool keyExists = true;
+        if (!SectionExists(data, section))
+        {
+            AddSection(data, section);
+            keyExists = false;
+        }
         data[section][key] = value;
+        return keyExists;
     }
 
     internal static void RemoveKey(Data data, string section, string key)
@@ -57,6 +63,17 @@ internal sealed class NeoIniReaderCore
         return new Dictionary<string, string>(data[section]);
     }
 
+    internal static Dictionary<string, string> FindKeyInAllSections(Data data, string key)
+    {
+        var results = new Dictionary<string, string>();
+        foreach (var section in data)
+        {
+            if (section.Value.TryGetValue(key, out var value))
+                results[section.Key] = value;
+        }
+        return results;
+    }
+
     internal static void ClearSection(Data data, string section)
     {
         if (!SectionExists(data, section)) return;
@@ -75,5 +92,22 @@ internal sealed class NeoIniReaderCore
         if (!SectionExists(data, oldSection) || SectionExists(data, newSection)) return;
         data[newSection] = data[oldSection];
         data.Remove(oldSection);
+    }
+
+    internal static List<(string section, string key, string value)> Search(Data data, string pattern)
+    {
+        var results = new List<(string, string, string)>();
+        if (string.IsNullOrEmpty(pattern)) return results;
+        var searchPattern = pattern.ToLowerInvariant();
+        foreach (var section in data)
+        {
+            foreach (var kvp in section.Value)
+            {
+                if ((kvp.Key?.ToLowerInvariant().Contains(searchPattern) == true) ||
+                        (kvp.Value?.ToLowerInvariant().Contains(searchPattern) == true))
+                    results.Add((section.Key, kvp.Key, kvp.Value));
+            }
+        }
+        return results;
     }
 }

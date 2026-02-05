@@ -15,10 +15,6 @@ internal sealed class NeoIniParser
     internal static string GetContent(Data data)
     {
         var content = new StringBuilder();
-        content.AppendLine("; WARNING: This file is auto-generated.");
-        content.AppendLine("; Any manual changes will be overwritten and may cause data loss.");
-        content.AppendLine("; The original data will be restored from backup.");
-        content.AppendLine();
         foreach (var section in data)
         {
             content.AppendLine($"[{section.Key}]");

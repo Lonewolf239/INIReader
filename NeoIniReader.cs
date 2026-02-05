@@ -13,7 +13,7 @@ namespace NeoIni;
 /// <br/>
 /// <b>Target Framework: .NET 6+</b>
 /// <br/>
-/// <b>Version: 1.5.7.3</b>
+/// <b>Version: 1.5.7.4</b>
 /// <br/>
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
@@ -332,9 +332,7 @@ public class NeoIniReader : IDisposable
     public async Task AddKeyInSectionAsync<T>(string section, string key, T value)
     {
         ThrowIfDisposed();
-
         string valueString = NeoIniParser.ValueToString(value);
-
         Lock.EnterWriteLock();
         try { NeoIniReaderCore.AddKeyInSection(Data, section, key, valueString); }
         finally { Lock.ExitWriteLock(); }
@@ -482,11 +480,7 @@ public class NeoIniReader : IDisposable
         bool keyExists = false;
         string valueString = NeoIniParser.ValueToString(value);
         Lock.EnterWriteLock();
-        try
-        {
-            keyExists = NeoIniReaderCore.KeyExists(Data, section, key);
-            NeoIniReaderCore.SetKey(Data, section, key, valueString);
-        }
+        try { keyExists = NeoIniReaderCore.SetKey(Data, section, key, valueString); }
         finally { Lock.ExitWriteLock(); }
         if (keyExists) OnKeyChanged?.Invoke(section, key, valueString);
         else OnKeyAdded?.Invoke(section, key, valueString);
@@ -504,11 +498,7 @@ public class NeoIniReader : IDisposable
         bool keyExists = false;
         string valueString = NeoIniParser.ValueToString(value);
         Lock.EnterWriteLock();
-        try
-        {
-            keyExists = NeoIniReaderCore.KeyExists(Data, section, key);
-            NeoIniReaderCore.SetKey(Data, section, key, valueString);
-        }
+        try { keyExists = NeoIniReaderCore.SetKey(Data, section, key, valueString); }
         finally { Lock.ExitWriteLock(); }
         if (keyExists) OnKeyChanged?.Invoke(section, key, valueString);
         else OnKeyAdded?.Invoke(section, key, valueString);
@@ -603,16 +593,9 @@ public class NeoIniReader : IDisposable
     public Dictionary<string, string> FindKeyInAllSections(string key)
     {
         ThrowIfDisposed();
-        var results = new Dictionary<string, string>();
+        Dictionary<string, string> results;
         Lock.EnterReadLock();
-        try
-        {
-            foreach (var section in Data)
-            {
-                if (section.Value.TryGetValue(key, out var value))
-                    results[section.Key] = value;
-            }
-        }
+        try { results = NeoIniReaderCore.FindKeyInAllSections(Data, key); }
         finally { Lock.ExitReadLock(); }
         return results;
     }
@@ -648,15 +631,10 @@ public class NeoIniReader : IDisposable
     public void RenameKey(string section, string oldKey, string newKey)
     {
         ThrowIfDisposed();
-        string value;
         Lock.EnterWriteLock();
-        try
-        {
-            NeoIniReaderCore.RenameKey(Data, section, oldKey, newKey);
-            value = Data[section][newKey];
-        }
+        try { NeoIniReaderCore.RenameKey(Data, section, oldKey, newKey); }
         finally { Lock.ExitWriteLock(); }
-        OnKeyChanged?.Invoke(section, oldKey, value);
+        OnKeyChanged?.Invoke(section, oldKey, newKey);
         DoAutoSave();
     }
 
@@ -667,15 +645,10 @@ public class NeoIniReader : IDisposable
     public async Task RenameKeyAsync(string section, string oldKey, string newKey)
     {
         ThrowIfDisposed();
-        string value;
         Lock.EnterWriteLock();
-        try
-        {
-            NeoIniReaderCore.RenameKey(Data, section, oldKey, newKey);
-            value = Data[section][newKey];
-        }
+        try { NeoIniReaderCore.RenameKey(Data, section, oldKey, newKey); }
         finally { Lock.ExitWriteLock(); }
-        OnKeyChanged?.Invoke(section, oldKey, value);
+        OnKeyChanged?.Invoke(section, oldKey, newKey);
         await DoAutoSaveAsync();
     }
 
@@ -711,22 +684,9 @@ public class NeoIniReader : IDisposable
     public List<(string section, string key, string value)> Search(string pattern)
     {
         ThrowIfDisposed();
-        if (string.IsNullOrEmpty(pattern)) return new List<(string, string, string)>();
-        var results = new List<(string, string, string)>();
-        var searchPattern = pattern.ToLowerInvariant();
+        List<(string, string, string)> results;
         Lock.EnterReadLock();
-        try
-        {
-            foreach (var section in Data)
-            {
-                foreach (var kvp in section.Value)
-                {
-                    if ((kvp.Key?.ToLowerInvariant().Contains(searchPattern) == true) ||
-                            (kvp.Value?.ToLowerInvariant().Contains(searchPattern) == true))
-                        results.Add((section.Key, kvp.Key, kvp.Value));
-                }
-            }
-        }
+        try { results = NeoIniReaderCore.Search(Data, pattern); }
         finally { Lock.ExitReadLock(); }
         OnSearchCompleted?.Invoke(pattern, results.Count);
         return results;
@@ -759,6 +719,9 @@ public class NeoIniReader : IDisposable
         OnDataCleared?.Invoke();
     }
 
+    /// <summary>Deletes the backup file from disk</summary>
+    public void DeleteBackup() => FileProvider.DeleteBackup();
+
     /// <summary>Clears the internal data structure</summary>
     public void Clear()
     {
@@ -777,7 +740,6 @@ public class NeoIniReader : IDisposable
     /// <returns>The generated encryption password or status message.</returns>
     public string GetEncryptionPassword()
     {
-        ThrowIfDisposed();
         if (!AutoEncryption) return "AutoEncryption is disabled";
         if (CustomEncryptionPassword) return "CustomEncryptionPassword is used. For security reasons, the password is not saved.";
         return NeoIniEncryptionProvider.GetEncryptionPassword();
