@@ -13,7 +13,7 @@ namespace NeoIni;
 /// <br/>
 /// <b>Target Framework: .NET 6+</b>
 /// <br/>
-/// <b>Version: 1.5.7.4</b>
+/// <b>Version: 1.5.7.5</b>
 /// <br/>
 /// <b>Black Box Philosophy:</b> This class follows a strict "black box" design principle - users interact only through the public API without needing to understand internal implementation details. Input goes in, processed output comes out, internals remain hidden and abstracted.
 /// </summary>
@@ -25,8 +25,8 @@ public class NeoIniReader : IDisposable
     private readonly bool CustomEncryptionPassword = false;
     private readonly byte[] EncryptionKey;
     private readonly ReaderWriterLockSlim Lock = new(LockRecursionPolicy.NoRecursion);
-    private readonly object DisposeLock = new();
     private bool Disposed = false;
+    private int DisposeState = 0;
     private readonly NeoIniFileProvider FileProvider;
 
     /// <summary>
@@ -191,28 +191,25 @@ public class NeoIniReader : IDisposable
     /// <summary>Releases managed resources and saves changes to the file</summary>
     protected virtual void Dispose(bool disposing)
     {
-        lock (DisposeLock)
+        if (Interlocked.CompareExchange(ref DisposeState, 1, 0) != 0) return;
+        if (disposing)
         {
-            if (Disposed) return;
-            Disposed = true;
+            if (SaveOnDispose)
+            {
+                Lock.EnterReadLock();
+                try { SaveFile(); }
+                finally { Lock.ExitReadLock(); }
+            }
+            Lock.EnterWriteLock();
+            try { Data.Clear(); }
+            finally { Lock.ExitWriteLock(); }
+            OnDataCleared?.Invoke();
+            Lock.Dispose();
         }
-        if (!disposing) return;
-        if (SaveOnDispose) SaveFile();
-        Lock.EnterWriteLock();
-        try { Data.Clear(); }
-        finally { Lock.ExitWriteLock(); }
-        OnDataCleared?.Invoke();
-        Lock.Dispose();
+        Disposed = true;
     }
 
-    private void ThrowIfDisposed()
-    {
-        lock (DisposeLock)
-        {
-            if (Disposed)
-                throw new ObjectDisposedException(nameof(NeoIniReader));
-        }
-    }
+    private void ThrowIfDisposed() { if (Disposed) throw new ObjectDisposedException(nameof(NeoIniReader)); }
 
     private bool ShouldAutoSave()
     {
