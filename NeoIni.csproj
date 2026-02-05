@@ -25,5 +25,9 @@
 		<Content Remove="NeoIniDemo\**" />
 		<None Remove="NeoIniDemo\**" />
 		<EmbeddedResource Remove="NeoIniDemo\**" />
+		<Compile Remove="NeoIniTest\**" />
+		<Content Remove="NeoIniTest\**" />
+		<None Remove="NeoIniTest\**" />
+		<EmbeddedResource Remove="NeoIniTest\**" />
 	</ItemGroup>
 </Project>
